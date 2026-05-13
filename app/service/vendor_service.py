@@ -43,17 +43,16 @@ def update_vendor_service(session: Session, vendor_id: UUID, data: VendorUpdate)
 
  
 def delete_vendor_service(session: Session, vendor_id: UUID):
-
     vendor = get_vendor_by_id(session, vendor_id)
 
     if not vendor:
         raise ValueError("VENDOR_NOT_FOUND")
 
-    items = session.exec(
-        select(Item).where(Item.vendor_id == vendor_id)
-    ).all()
+    item_exists = session.exec(
+        select(Item.id).where(Item.vendor_id == vendor_id)
+    ).first()
 
-    if items:
+    if item_exists:
         raise ValueError("VENDOR_HAS_ITEMS")
 
     return delete_vendor(session, vendor)
