@@ -5,12 +5,25 @@ from uuid import UUID
 from app.model.vendor import Vendor
 from app.schemas.vendor import VendorCreate, VendorUpdate
 
+
 def create_vendor(session: Session, data: VendorCreate) -> Vendor:
+    
+    full_name = data.contact_person.first_name
+    if data.contact_person.last_name:
+        full_name += f" {data.contact_person.last_name}"
 
-    # normalize email/contact
-    contact = (data.contact_info or "").strip().lower()
+    contact_parts = [data.contact_info.primary_phone]
 
-    # check ONLY active vendors
+    if data.contact_info.secondary_phone:
+        contact_parts.append(data.contact_info.secondary_phone)
+
+    if data.contact_info.email:
+        contact_parts.append(data.contact_info.email.strip().lower())
+
+    contact = " | ".join(contact_parts)
+
+    location = f"{data.location.city}, {data.location.country}"
+
     existing = session.exec(
         select(Vendor).where(
             Vendor.contact_info == contact,
@@ -23,9 +36,9 @@ def create_vendor(session: Session, data: VendorCreate) -> Vendor:
 
     vendor = Vendor(
         name=data.name,
-        contact_person=data.contact_person,
+        contact_person=full_name,
         contact_info=contact,
-        location=data.location,
+        location=location,
         lead_time=data.lead_time
     )
 
@@ -33,6 +46,7 @@ def create_vendor(session: Session, data: VendorCreate) -> Vendor:
     session.commit()
     session.refresh(vendor)
     return vendor
+
 
 def get_vendor_by_id(session: Session, vendor_id: UUID) -> Optional[Vendor]:
     return session.exec(
@@ -42,26 +56,42 @@ def get_vendor_by_id(session: Session, vendor_id: UUID) -> Optional[Vendor]:
         )
     ).first()
 
+
 def get_all_vendors(session: Session) -> List[Vendor]:
-    return session.exec(select(Vendor)).all()
+    return session.exec(
+        select(Vendor).where(Vendor.is_active == True)
+    ).all()
+
 
 def update_vendor(
     session: Session,
     vendor: Vendor,
     data: VendorUpdate
 ) -> Vendor:
-
     if data.name is not None:
         vendor.name = data.name
 
     if data.contact_person is not None:
-        vendor.contact_person = data.contact_person
+        full_name = data.contact_person.first_name
+        if data.contact_person.last_name:
+            full_name += f" {data.contact_person.last_name}"
+        vendor.contact_person = full_name
 
     if data.contact_info is not None:
-        vendor.contact_info = data.contact_info
+        contact_parts = [data.contact_info.primary_phone]
+
+        if data.contact_info.secondary_phone:
+            contact_parts.append(data.contact_info.secondary_phone)
+
+        if data.contact_info.email:
+            contact_parts.append(data.contact_info.email.strip().lower())
+
+        vendor.contact_info = " | ".join(contact_parts)
 
     if data.location is not None:
-        vendor.location = data.location
+        vendor.location = (
+            f"{data.location.city}, {data.location.country}"
+        )
 
     if data.lead_time is not None:
         vendor.lead_time = data.lead_time
@@ -73,6 +103,7 @@ def update_vendor(
     session.commit()
     session.refresh(vendor)
     return vendor
+
 
 def delete_vendor(session: Session, vendor: Vendor) -> Vendor:
     vendor.is_active = False
