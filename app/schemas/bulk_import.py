@@ -24,3 +24,10 @@ class ImportError(BaseModel):
 class ImportResponse(BaseModel):
     status: str
     records: int
+
+class ImportHistoryResponse(BaseModel):
+    file_name: str
+    date: datetime
+    records: int
+    status: str
+    file_link: str | None = None

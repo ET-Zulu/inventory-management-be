@@ -1,13 +1,14 @@
-import csv
-from io import StringIO
-
-from fastapi import APIRouter, UploadFile, File, Depends
-from sqlmodel import Session, select
+from fastapi import APIRouter, UploadFile, File, Depends, Query
+from sqlmodel import Session
 
 from app.core.database import get_session
-from app.model.item import Item
-from app.model.vendor import Vendor
-from app.model.bulk_import import BulkImport
+from app.schemas.bulk_import import ImportHistoryResponse
+
+from app.service.import_service import (
+    process_csv_import,
+    get_import_history_service,
+    search_import_history_service,
+)
 
 router = APIRouter(prefix="/imports", tags=["Imports"])
 
@@ -15,91 +16,46 @@ router = APIRouter(prefix="/imports", tags=["Imports"])
 @router.post("/csv")
 def upload_csv(
     file: UploadFile = File(...),
+    session: Session = Depends(get_session),
+    user_id: str | None = None  # Replace with authenticated user ID later
+):
+    return process_csv_import(session, file, user_id)
+
+
+@router.get("/history", response_model=list[ImportHistoryResponse])
+def get_history(
+    page: int = 1,
+    limit: int = 20,
     session: Session = Depends(get_session)
 ):
+    imports = get_import_history_service(session, page, limit)
 
-    content = file.file.read().decode("utf-8")
-    csv_data = csv.DictReader(StringIO(content))
+    return [
+        ImportHistoryResponse(
+            file_name=i.file_name,
+            date=i.created_at,
+            records=i.records_processed,
+            status=i.status.value,
+            file_link=None
+        )
+        for i in imports
+    ]
 
-    errors = []
-    valid_rows = []
- 
-    for index, row in enumerate(csv_data, start=1):
 
-        sku = row.get("sku")
-        name = row.get("name")
-        vendor_id = row.get("vendor_id")
-        cost_price = row.get("cost_price")
-        selling_price = row.get("selling_price")
- 
-        if not sku:
-            errors.append({"row": index, "field": "sku", "message": "Missing SKU"})
-            continue
+@router.get("/history/search", response_model=list[ImportHistoryResponse])
+def search_history(
+    q: str = Query(...),
+    session: Session = Depends(get_session)
+):
+    results = search_import_history_service(session, q)
 
-        if not name:
-            errors.append({"row": index, "field": "name", "message": "Missing name"})
-            continue
-
-        if not vendor_id:
-            errors.append({"row": index, "field": "vendor_id", "message": "Missing vendor"})
-            continue
- 
-        vendor = session.exec(
-            select(Vendor).where(
-                Vendor.id == vendor_id,
-                Vendor.is_active == True
-            )
-        ).first()
-
-        if not vendor:
-            errors.append({"row": index, "field": "vendor_id", "message": "Vendor not found"})
-            continue
- 
-        existing_item = session.exec(
-            select(Item).where(Item.sku == sku)
-        ).first()
-
-        if existing_item:
-            errors.append({"row": index, "field": "sku", "message": "Duplicate SKU"})
-            continue
-
-        valid_rows.append(row)
- 
-    if errors:
-        return {
-            "status": "failed",
-            "errors": errors
-        }
-
-    try:
-        with session.begin():  
-
-            for row in valid_rows:
-                item = Item(
-                    sku=row["sku"],
-                    name=row["name"],
-                    vendor_id=row["vendor_id"],
-                    cost_price=float(row["cost_price"]),
-                    selling_price=float(row["selling_price"]),
-                )
-                session.add(item)
- 
-            import_record = BulkImport(
-                file_name=file.filename,
-                records_processed=len(valid_rows),
-                status="success"
-            )
-
-            session.add(import_record)
-
-        return {
-            "status": "success",
-            "records": len(valid_rows)
-        }
-
-    except Exception as e:
-        session.rollback()
-        return {
-            "status": "failed",
-            "errors": [{"message": str(e)}]
-        }
+    return [
+        ImportHistoryResponse(
+            file_name=i.file_name,
+            date=i.created_at,
+            records=i.records_processed,
+            status=i.status.value,
+            file_link=None
+        )
+        for i in results
+    ]
