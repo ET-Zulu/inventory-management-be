@@ -6,3 +6,5 @@ sqlmodel
 pytest
 alembic
 psycopg2-binary
+bcrypt
+python-jose[cryptography]
