@@ -12,22 +12,17 @@ class Transaction(SQLModel, table=True):
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
 
-    item_id: UUID = Field(
-        foreign_key="items.id"
-    )
-
-    user_id: UUID = Field(
-        foreign_key="users.id"
-    )
+    item_id: UUID = Field(foreign_key="items.id", index=True)
+    user_id: UUID = Field(foreign_key="users.id", index=True)
 
     transaction_type: TransactionType
-
     quantity_change: int
-
     before_quantity: int
     after_quantity: int
 
-    reason: Optional[str] = None
+    reference_number: str = Field(index=True, nullable=False)
+
+    notes: Optional[str] = Field(default=None, nullable=True)
 
     created_at: datetime = Field(
         default_factory=datetime.utcnow,
