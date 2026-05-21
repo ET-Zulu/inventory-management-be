@@ -5,10 +5,10 @@ from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from app.model.enums import TransactionType
-from app.model.item import Item  # Adjust the path to your actual Item model file
+from app.model.item import Item  
 from app.model.transaction import Transaction
-from app.model.user import User  # Used to join and pull Operator_name
-from app.schemas import ErrorCode  # From your app.schemas package
+from app.model.user import User  
+from app.schemas import ErrorCode  
 from app.schemas.transaction import TransactionCreateRequest
 
 
