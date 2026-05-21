@@ -1,11 +1,11 @@
 from datetime import datetime
+from typing import Optional
 from uuid import UUID
 from pydantic import BaseModel, Field, field_validator
 from app.model.enums import TransactionType
 
 
 class TransactionCreateRequest(BaseModel):
-    
     item_id: UUID = Field(..., description="The UUID of the stock item")
     user_id: UUID = Field(..., description="The UUID of the operator performing this action")
     transaction_type: TransactionType = Field(..., description="Must be 'INBOUND' or 'OUTBOUND'")
@@ -23,7 +23,6 @@ class TransactionCreateRequest(BaseModel):
 
 
 class TransactionCreateDataResponse(BaseModel):
-    
     id: UUID
     user_id: UUID
     item_id: UUID
@@ -37,13 +36,12 @@ class TransactionCreateDataResponse(BaseModel):
 
 
 class TransactionListItemResponse(BaseModel):
-    
     id: UUID
     item: str = Field(..., description="Name of the item")
     sku: str = Field(..., description="Unique SKU code of the item")
     transaction_type: TransactionType
     quantity_change: int
-    operator_name: str = Field(..., description="Name of the operator pulled from user record")
+    Opratore_name: str = Field(..., description="Name of the operator pulled from user record")
     reference_number: str
     notes: Optional[str] = None
     before_quantity: int
@@ -52,7 +50,6 @@ class TransactionListItemResponse(BaseModel):
 
 
 class TransactionListDashboardResponse(BaseModel):
-    
     total_movement: int
     inbound_24h: int
     outbound_24h: int

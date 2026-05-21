@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
-from uuid import UUID
+from typing import Optional
 from fastapi import HTTPException, status
-from sqlalchemy import func, or_
+from sqlalchemy import func, or_, cast, String
 from sqlalchemy.orm import Session
 
 from app.model.enums import TransactionType
@@ -16,7 +16,6 @@ class TransactionService:
 
     @staticmethod
     def create_inventory_transaction(db: Session, payload: TransactionCreateRequest) -> Transaction:
-        
         item = db.query(Item).filter(Item.id == payload.item_id).with_for_update().first()
         
         if not item or not item.is_active:
@@ -34,7 +33,7 @@ class TransactionService:
             
             if after_qty < 0:
                 raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT,
+                    status_code=status.HTTP_400_BAD_REQUEST,
                     detail={
                         "error": "INSUFFICIENT_STOCK",
                         "message": "Stock cannot go below zero"
@@ -76,13 +75,12 @@ class TransactionService:
         start_date: Optional[str] = None,
         end_date: Optional[str] = None
     ) -> dict:
-        
         query = db.query(Transaction).join(Item).join(User)
 
         if search:
             query = query.filter(
                 or_(
-                    func.cast(Item.id, func.text).ilike(f"%{search}%"),
+                    cast(Item.id, String).ilike(f"%{search}%"),  # Fixed this line
                     Item.sku.ilike(f"%{search}%"),
                     Item.name.ilike(f"%{search}%")
                 )
@@ -98,7 +96,7 @@ class TransactionService:
 
         past_24h = datetime.utcnow() - timedelta(hours=24)
         
-        total_movement = db.query(func.count(Transaction.id)).scalar() or 0
+        total_movement = db.query(func.sum(Transaction.quantity_change)).scalar() or 0
         
         inbound_24h = db.query(func.sum(Transaction.quantity_change)).filter(
             Transaction.transaction_type == TransactionType.INBOUND,
@@ -112,15 +110,13 @@ class TransactionService:
 
         anomalies = db.query(func.count(Transaction.id)).filter(
             Transaction.transaction_type == TransactionType.OUTBOUND,
-            Transaction.quantity_change >= 100,
+            Transaction.quantity_change > 100,
             Transaction.created_at >= past_24h
         ).scalar() or 0
 
-        
         offset = (page - 1) * limit
         transactions_list = query.order_by(Transaction.created_at.desc()).offset(offset).limit(limit).all()
 
-        
         records = []
         for tx in transactions_list:
             records.append({
@@ -129,7 +125,7 @@ class TransactionService:
                 "sku": tx.item.sku,
                 "transaction_type": tx.transaction_type,
                 "quantity_change": tx.quantity_change,
-                "operator_name": tx.user.name,  # Pulled cleanly via User join
+                "Opratore_name": tx.user.name,
                 "reference_number": tx.reference_number,
                 "notes": tx.notes,
                 "before_quantity": tx.before_quantity,
@@ -138,7 +134,7 @@ class TransactionService:
             })
 
         return {
-            "total_movement": total_movement,
+            "total_movement": int(total_movement),
             "inbound_24h": int(inbound_24h),
             "outbound_24h": int(outbound_24h),
             "anomalies": anomalies,
