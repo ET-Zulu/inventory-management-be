@@ -47,6 +47,7 @@ class VendorRead(BaseModel):
     lead_time: int
     is_active: bool
     created_at: datetime
+    items_count: int = 0
 
     class Config:
         from_attributes = True

@@ -14,7 +14,6 @@ from app.repository.vendor_repository import (
 
 from app.schemas.vendor import VendorCreate, VendorUpdate
 
-# Helper: transform request → DB format
 def build_vendor_fields(data: VendorCreate):
     full_name = data.contact_person.first_name
     if data.contact_person.last_name:
@@ -56,9 +55,21 @@ def get_vendor_service(session: Session, vendor_id: UUID):
 
     return vendor
 
-def list_vendors_service(session: Session):
+def list_vendors_service(
+    session: Session,
+    page: int,
+    limit: int,
+    search: str | None = None
+):
 
-    return get_all_vendors(session)
+    skip = (page - 1) * limit
+
+    return get_all_vendors(
+        session=session,
+        skip=skip,
+        limit=limit,
+        search=search
+    )
 
 def update_vendor_service(session: Session, vendor_id: UUID, data: VendorUpdate):
 

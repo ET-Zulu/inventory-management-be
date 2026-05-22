@@ -1,6 +1,7 @@
 from sqlmodel import Session, select
 from typing import List, Optional
 from uuid import UUID
+from sqlalchemy import or_, func
 
 from app.model.vendor import Vendor
 
@@ -21,10 +22,31 @@ def get_vendor_by_id(session: Session, vendor_id: UUID) -> Optional[Vendor]:
     ).first()
 
 
-def get_all_vendors(session: Session) -> List[Vendor]:
-    return session.exec(
-        select(Vendor).where(Vendor.is_active == True)
-    ).all()
+def get_all_vendors(
+    session: Session,
+    skip: int = 0,
+    limit: int = 20,
+    search: str | None = None
+):
+
+    query = select(Vendor).where(
+        Vendor.is_active == True
+    )
+
+    if search:
+        search = f"%{search.lower()}%"
+
+        query = query.where(
+            or_(
+                func.lower(Vendor.name).like(search),
+                func.lower(Vendor.contact_person).like(search),
+                func.lower(Vendor.location).like(search)
+            )
+        )
+
+    query = query.offset(skip).limit(limit)
+
+    return session.exec(query).all()
 
 
 def update_vendor(session: Session, vendor: Vendor) -> Vendor:
