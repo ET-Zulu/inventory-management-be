@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Any
 from uuid import UUID, uuid4
 
 from sqlmodel import SQLModel, Field, Relationship
@@ -8,7 +10,7 @@ from app.model.enums import TransactionType
 
 
 class Transaction(SQLModel, table=True):
-    __tablename__ = "transactions"
+    __tablename__: str = "transactions"
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
 
@@ -29,10 +31,10 @@ class Transaction(SQLModel, table=True):
         index=True
     )
 
-    item: "Item" = Relationship(
+    item: Any = Relationship(
         back_populates="transactions"
     )
 
-    user: "User" = Relationship(
+    user: Any = Relationship(
         back_populates="transactions"
     )
