@@ -25,12 +25,22 @@ class SetupPasswordRequest(BaseModel):
     token: str
     name: str = Field(min_length=1)
     email: EmailStr
-    password: str = Field(min_length=8)
+    password: str = Field(
+        min_length=8,
+        regex=r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$",
+        description="Password must be at least 6 characters long and include at least one uppercase letter, one lowercase letter, one number, and one special character.",
+    )
 
 class AdminSetupRequest(BaseModel):
     name: str = Field(min_length=1)
     email: EmailStr
-    password: str = Field(min_length=8)
+    password: str = Field(
+        min_length=8,
+        regex=r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$",
+        description="Password must be at least 6 characters long and include at least one uppercase letter, one lowercase letter, one number, and one special character.",
+    )
+
+  
 
 
 class SetupPasswordResponse(BaseModel):
