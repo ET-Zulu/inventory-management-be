@@ -12,18 +12,15 @@ class InviteToken(SQLModel, table=True):
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
 
-    email: str
-    role: UserRole
+    email: str = Field(index=True)
+    role: UserRole = Field(index=True)
 
-    token_hash: str = Field(unique=True)
+    token_hash: str = Field(unique=True, index=True)
 
-    invited_by: Optional[UUID] = Field(
-        default=None,
-        foreign_key="users.id"
-    )
+    invited_by: Optional[UUID] = Field(default=None, foreign_key="users.id", index=True)
 
-    expires_at: datetime
-    used_at: Optional[datetime] = None
+    expires_at: datetime = Field(index=True)
+    used_at: Optional[datetime] = Field(default=None, index=True)
 
     created_at: datetime = Field(
         default_factory=datetime.utcnow

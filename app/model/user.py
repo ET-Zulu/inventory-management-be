@@ -16,13 +16,11 @@ class User(SQLModel, table=True):
     email: str = Field(unique=True, index=True)
 
     password_hash: str
-    role: UserRole
+    role: UserRole = Field(index=True)
 
     is_active: bool = True
 
     created_at: datetime = Field(default_factory=datetime.utcnow)
-
-
     transactions: List["Transaction"] = Relationship(
         back_populates="user"
     )
