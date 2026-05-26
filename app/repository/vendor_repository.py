@@ -58,6 +58,7 @@ def update_vendor(session: Session, vendor: Vendor) -> Vendor:
 
 def delete_vendor(session: Session, vendor: Vendor) -> Vendor:
     vendor.is_active = False
+    vendor.deleted_at = func.now()
     session.add(vendor)
     session.commit()
     session.refresh(vendor)
