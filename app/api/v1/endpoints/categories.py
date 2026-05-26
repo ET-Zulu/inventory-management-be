@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException
 
 from app.core.database import SessionType
 from app.schemas.common import success_response, error_response, ErrorCode
-from app.schemas.category import CategoryCreate, CategoryUpdate, CategoryResponse
+from app.schemas.category import CategoryCreate, CategoryUpdate
 from app.service import category_service
 
 router = APIRouter(prefix="/categories", tags=["Categories"])
@@ -14,14 +14,10 @@ router = APIRouter(prefix="/categories", tags=["Categories"])
 def create_category(payload: CategoryCreate, session: SessionType):
     try:
         category = category_service.create_category(session, payload)
+        response = category_service.get_category_by_id(session, category.id)
         return success_response(
             message="Category created successfully",
-            data=CategoryResponse(
-                id=category.id,
-                name=category.name,
-                created_at=category.created_at,
-                vendor_total=0,
-            ).model_dump(),
+            data=response.model_dump(),
         )
     except ValueError as e:
         raise HTTPException(
@@ -47,16 +43,9 @@ def get_category(category_id: UUID, session: SessionType):
             status_code=404,
             detail=error_response(ErrorCode.NOT_FOUND, "Category not found"),
         )
-
-    vendor_total = category_service._count_vendors_for_category(session, category.id)
     return success_response(
         message="Category retrieved successfully",
-        data=CategoryResponse(
-            id=category.id,
-            name=category.name,
-            created_at=category.created_at,
-            vendor_total=vendor_total,
-        ).model_dump(),
+        data=category.model_dump(),
     )
 
 
@@ -68,16 +57,9 @@ def update_category(category_id: UUID, payload: CategoryUpdate, session: Session
             status_code=404,
             detail=error_response(ErrorCode.NOT_FOUND, "Category not found"),
         )
-
-    vendor_total = category_service._count_vendors_for_category(session, category.id)
     return success_response(
         message="Category updated successfully",
-        data=CategoryResponse(
-            id=category.id,
-            name=category.name,
-            created_at=category.created_at,
-            vendor_total=vendor_total,
-        ).model_dump(),
+        data=category.model_dump(),
     )
 
 

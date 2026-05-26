@@ -1,11 +1,11 @@
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Optional, Tuple
 from uuid import UUID
 
-from sqlmodel import Session, select, func, or_, col
+from sqlmodel import Session
 
 from app.model.item import Item
-from app.model.transaction import Transaction
+from app.repository import item_repository
 
 
 def derive_status(item: Item) -> str:
@@ -17,14 +17,23 @@ def derive_status(item: Item) -> str:
 
 
 def create_item(session: Session, payload) -> Item:
-    # SKU check is case-insensitive — "kbd-001" and "KBD-001" are the same
-    sku_upper = payload.sku.strip().upper()
-
-    existing = session.exec(
-        select(Item).where(func.upper(Item.sku) == sku_upper)
-    ).first()
+    existing = item_repository.get_item_by_sku(session, payload.sku)
     if existing:
-        raise ValueError(f"SKU '{payload.sku}' already exists")
+        if existing.is_active:
+            raise ValueError(f"SKU '{payload.sku}' already exists")
+        # Reactivate soft-deleted item with the new creation payload
+        existing.is_active = True
+        existing.deleted_at = None
+        existing.name = payload.name
+        existing.description = payload.description
+        existing.quantity_on_hand = payload.initial_stock
+        existing.minimum_stock_level = payload.minimum_stock_level
+        existing.cost_price = payload.cost_price
+        existing.selling_price = payload.selling_price
+        existing.category_id = payload.category_id
+        existing.vendor_id = payload.vendor_id
+        existing.location = payload.bin_location or ""
+        return item_repository.save_item(session, existing)
 
     item = Item(
         sku=payload.sku.strip(),
@@ -38,10 +47,7 @@ def create_item(session: Session, payload) -> Item:
         vendor_id=payload.vendor_id,
         location=payload.bin_location or "",
     )
-    session.add(item)
-    session.commit()
-    session.refresh(item)
-    return item
+    return item_repository.save_item(session, item)
 
 
 def get_all_items(
@@ -54,124 +60,68 @@ def get_all_items(
     search: Optional[str] = None,
     low_stock: bool = False,
 ) -> Dict:
-    query = select(Item).where(Item.is_active == True)  # noqa: E712
+    items, total = item_repository.get_filtered_items(
+        session, page, limit, category_id, vendor_id, search, low_stock
+    )
 
-    if category_id:
-        query = query.where(Item.category_id == category_id)
-
-    if vendor_id:
-        query = query.where(Item.vendor_id == vendor_id)
-
-    if search:
-        pattern = f"%{search}%"
-        query = query.where(
-            or_(
-                col(Item.name).ilike(pattern),
-                col(Item.sku).ilike(pattern),
-            )
-        )
-
-    if low_stock:
-        query = query.where(Item.quantity_on_hand <= Item.minimum_stock_level)
-
-    count_query = select(func.count()).select_from(query.subquery())
-    total = session.exec(count_query).one()
-
-    offset = (page - 1) * limit
-    items = session.exec(query.offset(offset).limit(limit)).all()
-
-    # Summary stats are always across all active items, not just the current filter
-    active_skus = session.exec(
-        select(func.count()).where(Item.is_active == True)  # noqa: E712
-    ).one()
-
-    below_threshold = session.exec(
-        select(func.count()).where(
-            Item.is_active == True,  # noqa: E712
-            Item.quantity_on_hand <= Item.minimum_stock_level,
-        )
-    ).one()
+    active_skus = item_repository.count_active_skus(session)
+    below_threshold = item_repository.count_below_threshold(session)
 
     return {
         "summary": {
-            "active_skus": active_skus or 0,
-            "below_threshold": below_threshold or 0,
+            "active_skus": active_skus,
+            "below_threshold": below_threshold,
         },
         "data": items,
         "page": page,
         "limit": limit,
-        "total": total or 0,
+        "total": total,
     }
 
 
 def get_item_by_id(session: Session, item_id: UUID) -> Optional[Item]:
-    return session.exec(
-        select(Item).where(
-            Item.id == item_id,
-            Item.is_active == True,  # noqa: E712
-        )
-    ).first()
+    return item_repository.get_item_by_id(session, item_id)
 
 
 def update_item(session: Session, item_id: UUID, payload) -> Optional[Item]:
-    item = get_item_by_id(session, item_id)
+    item = item_repository.get_item_by_id(session, item_id)
     if not item:
         return None
 
     update_data = payload.model_dump(exclude_unset=True)
 
-    # SKU is immutable, drop it silently if someone passes it
     update_data.pop("sku", None)
 
-    # Schema uses bin_location but the model field is location
     if "bin_location" in update_data:
         update_data["location"] = update_data.pop("bin_location") or ""
 
     for key, value in update_data.items():
         setattr(item, key, value)
 
-    session.add(item)
-    session.commit()
-    session.refresh(item)
-    return item
+    return item_repository.save_item(session, item)
 
 
 def delete_item(session: Session, item_id: UUID) -> Tuple[Optional[Item], str]:
-    item = get_item_by_id(session, item_id)
+    item = item_repository.get_item_by_id(session, item_id)
     if not item:
         return None, "not_found"
 
-    # Can't hard delete if transactions reference this item
-    has_transactions = session.exec(
-        select(Transaction).where(Transaction.item_id == item_id)
-    ).first()
+    has_tx = item_repository.has_transactions(session, item_id)
 
-    if has_transactions:
+    if has_tx:
         item.is_active = False
         item.deleted_at = datetime.utcnow()
-        session.add(item)
-        session.commit()
-        session.refresh(item)
-        return item, "soft_deleted"
+        saved_item = item_repository.save_item(session, item)
+        return saved_item, "soft_deleted"
     else:
-        session.delete(item)
-        session.commit()
+        item_repository.delete_item_hard(session, item)
         return item, "hard_deleted"
 
 
 def get_storage_capacity(session: Session) -> Dict:
-    total_quantity = session.exec(
-        select(func.coalesce(func.sum(Item.quantity_on_hand), 0)).where(
-            Item.is_active == True  # noqa: E712
-        )
-    ).one()
-
-    # Using sum of minimum_stock_levels as a capacity baseline per item slot
-    total_capacity = session.exec(
-        select(func.coalesce(func.sum(Item.minimum_stock_level), 0)).where(
-            Item.is_active == True  # noqa: E712
-        )
-    ).one()
+    total_quantity = item_repository.get_total_quantity(session)
+    # Business decision: we treat the sum of minimum_stock_level as total capacity
+    total_capacity = item_repository.get_total_minimum_stock_level(session)
 
     if total_capacity == 0:
         used_percent = 0.0
