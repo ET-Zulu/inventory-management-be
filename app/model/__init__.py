@@ -17,8 +17,8 @@ __all__ = [
     "InviteToken",
     "Category",
     "Vendor",
-    "Item",
     "Transaction",
+    "Item",
     "BulkImport",
 ]
 
