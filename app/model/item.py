@@ -1,6 +1,11 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
 from uuid import UUID, uuid4
+
+if TYPE_CHECKING:
+    from app.model.transaction import Transaction
+    from app.model.vendor import Vendor
+    from app.model.category import Category
 
 from sqlmodel import SQLModel, Field, Relationship
 

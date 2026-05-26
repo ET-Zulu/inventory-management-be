@@ -1,5 +1,8 @@
 from datetime import datetime
-from typing import List
+from typing import List, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.model.item import Item
 from uuid import UUID, uuid4
 
 from sqlmodel import SQLModel, Field, Relationship
