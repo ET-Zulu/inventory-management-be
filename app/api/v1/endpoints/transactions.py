@@ -1,15 +1,17 @@
-from datetime import datetime
 from typing import Optional
 from fastapi import APIRouter, Depends, Query, status
-from sqlalchemy.orm import Session
+from sqlmodel import Session
 
-from app.core.database import get_session 
+from app.core.database import get_session
 from app.schemas.transaction import (
     TransactionCreateRequest,
     TransactionCreateDataResponse,
     TransactionListDashboardResponse,
 )
-from app.service.transaction import TransactionService
+from app.service.transaction import (
+    create_inventory_transaction,
+    get_transaction_ledger,
+)
 
 router = APIRouter()
 
@@ -22,9 +24,9 @@ router = APIRouter()
 )
 def create_transaction(
     payload: TransactionCreateRequest,
-    db: Session = Depends(get_session)  # Updated here as well
+    db: Session = Depends(get_session),
 ):
-    return TransactionService.create_inventory_transaction(db=db, payload=payload)
+    return create_inventory_transaction(db=db, payload=payload)
 
 
 @router.get(
@@ -40,9 +42,9 @@ def list_transactions(
     transaction_type: Optional[str] = Query(None, description="Filter by type: INBOUND or OUTBOUND"),
     start_date: Optional[str] = Query(None, description="Filter from start date (ISO format)"),
     end_date: Optional[str] = Query(None, description="Filter to end date (ISO format)"),
-    db: Session = Depends(get_session),  # Updated here as well
+    db: Session = Depends(get_session),
 ):
-    return TransactionService.get_transaction_ledger(
+    return get_transaction_ledger(
         db=db,
         page=page,
         limit=limit,
