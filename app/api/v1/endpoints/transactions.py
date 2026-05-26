@@ -8,7 +8,7 @@ from app.schemas.transaction import (
     TransactionCreateDataResponse,
     TransactionListDashboardResponse,
 )
-from app.service.transaction import (
+from app.service.transaction_service import (
     create_inventory_transaction,
     get_transaction_ledger,
 )
