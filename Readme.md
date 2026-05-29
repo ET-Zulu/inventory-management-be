@@ -2,7 +2,7 @@
 
 A robust, production-ready backend system for managing inventory with full transaction tracking, vendor management, stock alerts, and bulk operations. Built to ensure **accuracy, traceability, and atomic consistency** in all inventory movements.
 
-**Tech Stack:** FastAPI • SQLModel • PostgreSQL • Alembic • Docker
+**Tech Stack:** FastAPI • SQLModel • PostgreSQL • Alembic
 
 ---
 
@@ -13,7 +13,6 @@ A robust, production-ready backend system for managing inventory with full trans
 - [Project Structure](#-project-structure)
 - [Tech Stack](#-tech-stack)
 - [Getting Started](#-getting-started)
-- [Docker Setup](#-docker-setup)
 - [API Documentation](#-api-documentation)
 - [Database Migrations](#-database-migrations)
 - [Contributing](#-contributing)
@@ -34,7 +33,6 @@ This system provides a centralized inventory management platform that:
 * ✅ Supports bulk import/export via CSV
 * ✅ Enforces strict role-based access control (RBAC)
 * ✅ Standardized API response format across all endpoints
-* ✅ Docker containerization for easy deployment
 
 ---
 
@@ -125,8 +123,6 @@ inventory_backend/
 │   ├── versions/               # Migration files
 │   └── env.py
 ├── tests/                      # Test files
-├── Dockerfile                  # Docker configuration
-├── docker-compose.yml          # Docker Compose setup
 ├── requirements.txt            # Python dependencies
 ├── .env.example                # Environment variables template
 └── Readme.md                   # This file
@@ -144,7 +140,6 @@ inventory_backend/
 | Migrations | Alembic |
 | Async | Uvicorn |
 | Validation | Pydantic |
-| Containerization | Docker & Docker Compose |
 | Testing | Pytest |
 
 ---
@@ -154,7 +149,7 @@ inventory_backend/
 ### Prerequisites
 
 - Python 3.11+
-- PostgreSQL 14+ (or use Docker)
+- PostgreSQL 14+
 - pip & virtualenv
 
 ### Local Installation
@@ -196,44 +191,7 @@ inventory_backend/
 
 ---
 
-## 🐳 Docker Setup
 
-### Quick Start
-
-1. **Build images**
-   ```bash
-   docker-compose build
-   ```
-
-2. **Start services**
-   ```bash
-   docker-compose up -d
-   ```
-
-3. **View logs**
-   ```bash
-   docker-compose logs -f app
-   ```
-
-4. **Access the API**
-   - API: http://localhost:8000
-   - Docs: http://localhost:8000/docs
-   - ReDoc: http://localhost:8000/redoc
-
-### Using Makefile
-
-```bash
-make docker-build     # Build images
-make docker-up        # Start containers
-make docker-down      # Stop containers
-make docker-logs      # View logs
-make docker-shell     # Access app container
-make docker-clean     # Remove containers & volumes
-```
-
-For detailed Docker setup, see [DOCKER_SETUP.md](DOCKER_SETUP.md)
-
----
 
 ## 📚 API Documentation
 
@@ -539,7 +497,7 @@ alembic revision --autogenerate -m "fix: migration issue"
 netstat -ano | findstr :8000
 taskkill /PID <PID> /F
 
-# Or change port in .env or Docker Compose
+# Or change port in .env
 ```
 
 ---
@@ -567,7 +525,6 @@ This is a group project developed collaboratively. For questions about specific 
 ## 🔗 Related Documentation
 
 - [API Response Format Guide](app/schemas/RESPONSE_FORMAT.md)
-- [Docker Setup Guide](DOCKER_SETUP.md)
 - [FastAPI Documentation](https://fastapi.tiangolo.com)
 - [SQLModel Documentation](https://sqlmodel.tiangolo.com)
 - [Alembic Documentation](https://alembic.sqlalchemy.org)
