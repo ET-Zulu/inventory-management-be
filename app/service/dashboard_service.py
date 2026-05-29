@@ -1,6 +1,6 @@
 from sqlmodel import Session
 from typing import Optional
-from ...app.repository import dashboard_repository as repo
+from app.repository import dashboard_repository as repo
 
 def get_dashboard_overview(db: Session) -> dict:
     
@@ -11,8 +11,8 @@ def get_dashboard_overview(db: Session) -> dict:
     formatted_txs = [
         {
             "id": str(tx.id),
-            "item": tx.item.name,
-            "sku": tx.item.sku,
+            "item": tx.item_name,
+            "sku": tx.item_sku,
             "transaction_type": tx.transaction_type,
             "quantity_change": tx.quantity_change,
             "created_at": tx.created_at.isoformat(),

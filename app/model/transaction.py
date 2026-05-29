@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional, Any
+from typing import Optional, TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from sqlmodel import SQLModel, Field, Relationship
 
 from app.model.enums import TransactionType
+
+if TYPE_CHECKING:
+    from app.model.item import Item
+    from app.model.user import User
 
 
 class Transaction(SQLModel, table=True):
@@ -22,19 +26,16 @@ class Transaction(SQLModel, table=True):
     before_quantity: int
     after_quantity: int
 
-    reference_number: str = Field(index=True, nullable=False)
-
-    notes: Optional[str] = Field(default=None, nullable=True)
 
     created_at: datetime = Field(
         default_factory=datetime.utcnow,
         index=True
     )
 
-    item: Any = Relationship(
+    item: Item = Relationship(
         back_populates="transactions"
     )
 
-    user: Any = Relationship(
+    user: User = Relationship(
         back_populates="transactions"
     )

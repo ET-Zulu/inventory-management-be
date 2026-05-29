@@ -2,6 +2,8 @@ from fastapi import APIRouter, UploadFile, File, Depends, Query
 from sqlmodel import Session
 
 from app.core.database import get_session
+from app.dependencies.auth import get_current_user
+from app.model.user import User
 from app.schemas.bulk_import import ImportHistoryResponse
 
 from app.service.import_service import (
@@ -17,9 +19,9 @@ router = APIRouter(prefix="/imports", tags=["Imports"])
 def upload_csv(
     file: UploadFile = File(...),
     session: Session = Depends(get_session),
-    user_id: str | None = None  # Replace with authenticated user ID later
+    current_user: User = Depends(get_current_user),
 ):
-    return process_csv_import(session, file, user_id)
+    return process_csv_import(session, file, current_user.id)
 
 
 @router.get("/history", response_model=list[ImportHistoryResponse])

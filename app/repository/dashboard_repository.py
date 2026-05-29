@@ -70,7 +70,14 @@ def fetch_monthly_stock_movements(session: Session) -> list[dict[str, Any]]:
 
 def fetch_recent_dashboard_transactions(session: Session, limit: int = 5) -> list[Transaction]:
     statement = (
-        select(Transaction)
+        select(
+            Transaction.id,
+            Item.name.label("item_name"),
+            Item.sku.label("item_sku"),
+            Transaction.transaction_type,
+            Transaction.quantity_change,
+            Transaction.created_at,
+        )
         .join(Item)
         .order_by(desc(Transaction.created_at))
         .limit(limit)

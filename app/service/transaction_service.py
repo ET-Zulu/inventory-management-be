@@ -6,16 +6,21 @@ from sqlmodel import Session
 from app.model.enums import TransactionType
 from app.model.item import Item
 from app.model.transaction import Transaction
+from app.model.user import User
 from app.repository.transaction_repository import (
     fetch_transaction_ledger,
     get_item_for_update,
     get_transaction_metrics,
     save_transaction,
 )
-from app.schemas.transaction import TransactionCreateRequest
+from app.schemas.transaction import TransactionInput
 
 
-def create_inventory_transaction(db: Session, payload: TransactionCreateRequest) -> Transaction:
+def create_inventory_transaction(
+    db: Session,
+    current_user: User,
+    payload: TransactionInput,
+) -> Transaction:
     item = get_item_for_update(db, payload.item_id)
     if not item or not item.is_active:
         raise HTTPException(
@@ -47,13 +52,11 @@ def create_inventory_transaction(db: Session, payload: TransactionCreateRequest)
 
     transaction = Transaction(
         item_id=payload.item_id,
-        user_id=payload.user_id,
+        user_id=current_user.id,
         transaction_type=payload.transaction_type,
         quantity_change=payload.quantity_change,
         before_quantity=before_qty,
         after_quantity=after_qty,
-        reference_number=payload.reference_number,
-        notes=payload.notes,
         created_at=datetime.utcnow(),
     )
 
@@ -99,8 +102,7 @@ def get_transaction_ledger(
             "transaction_type": tx.transaction_type,
             "quantity_change": tx.quantity_change,
             "Opratore_name": tx.user.name,
-            "reference_number": tx.reference_number,
-            "notes": tx.notes,
+            # notes removed from DB schema; omit from output
             "before_quantity": tx.before_quantity,
             "after_quantity": tx.after_quantity,
             "created_at": tx.created_at,

@@ -1,5 +1,6 @@
 import csv
 from io import StringIO
+from uuid import UUID
 
 from sqlmodel import Session, select
 
@@ -14,7 +15,7 @@ from app.repository.import_repository import (
 )
 
 
-def process_csv_import(session: Session, file, user_id=None):
+def process_csv_import(session: Session, file, user_id: UUID | None = None):
     """
     Process CSV import using all-or-nothing validation.
 
