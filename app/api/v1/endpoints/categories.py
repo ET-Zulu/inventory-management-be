@@ -1,8 +1,9 @@
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.database import SessionType
+from app.dependencies.auth import get_admin, get_current_active_user
 from app.schemas.common import success_response, error_response, ErrorCode
 from app.schemas.category import CategoryCreate, CategoryUpdate
 from app.service import category_service
@@ -10,7 +11,7 @@ from app.service import category_service
 router = APIRouter(prefix="/categories", tags=["Categories"])
 
 
-@router.post("", status_code=201)
+@router.post("", status_code=201, dependencies=[Depends(get_admin)])
 def create_category(payload: CategoryCreate, session: SessionType):
     try:
         category = category_service.create_category(session, payload)
@@ -26,7 +27,7 @@ def create_category(payload: CategoryCreate, session: SessionType):
         )
 
 
-@router.get("")
+@router.get("", dependencies=[Depends(get_current_active_user)])
 def get_categories(session: SessionType):
     categories = category_service.get_all_categories(session)
     return success_response(
@@ -35,7 +36,7 @@ def get_categories(session: SessionType):
     )
 
 
-@router.get("/{category_id}")
+@router.get("/{category_id}", dependencies=[Depends(get_current_active_user)])
 def get_category(category_id: UUID, session: SessionType):
     category = category_service.get_category_by_id(session, category_id)
     if not category:
@@ -49,7 +50,7 @@ def get_category(category_id: UUID, session: SessionType):
     )
 
 
-@router.patch("/{category_id}")
+@router.patch("/{category_id}", dependencies=[Depends(get_admin)])
 def update_category(category_id: UUID, payload: CategoryUpdate, session: SessionType):
     category = category_service.update_category(session, category_id, payload)
     if not category:
@@ -63,7 +64,7 @@ def update_category(category_id: UUID, payload: CategoryUpdate, session: Session
     )
 
 
-@router.delete("/{category_id}")
+@router.delete("/{category_id}", dependencies=[Depends(get_admin)])
 def delete_category(category_id: UUID, session: SessionType):
     category = category_service.delete_category(session, category_id)
     if not category:

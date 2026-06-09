@@ -1,9 +1,10 @@
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.core.database import SessionType
+from app.dependencies.auth import get_admin, get_current_active_user, get_operator
 from app.schemas.common import success_response, error_response, ErrorCode
 from app.schemas.item import (
     ItemCreate,
@@ -40,7 +41,7 @@ def _item_to_response(item) -> dict:
 
 # /storage/capacity must be defined before /{item_id} so FastAPI
 # doesn't try to parse "storage" as a UUID
-@router.get("/storage/capacity")
+@router.get("/storage/capacity", dependencies=[Depends(get_current_active_user)])
 def get_storage_capacity(session: SessionType):
     capacity = item_service.get_storage_capacity(session)
     return success_response(
@@ -49,7 +50,7 @@ def get_storage_capacity(session: SessionType):
     )
 
 
-@router.post("", status_code=201)
+@router.post("", status_code=201, dependencies=[Depends(get_operator)])
 def create_item(payload: ItemCreate, session: SessionType):
     try:
         item = item_service.create_item(session, payload)
@@ -64,7 +65,7 @@ def create_item(payload: ItemCreate, session: SessionType):
         )
 
 
-@router.get("")
+@router.get("", dependencies=[Depends(get_current_active_user)])
 def get_items(
     session: SessionType,
     page: int = Query(default=1, ge=1),
@@ -100,7 +101,7 @@ def get_items(
     )
 
 
-@router.get("/{item_id}")
+@router.get("/{item_id}", dependencies=[Depends(get_current_active_user)])
 def get_item(item_id: UUID, session: SessionType):
     item = item_service.get_item_by_id(session, item_id)
     if not item:
@@ -114,7 +115,7 @@ def get_item(item_id: UUID, session: SessionType):
     )
 
 
-@router.patch("/{item_id}")
+@router.patch("/{item_id}", dependencies=[Depends(get_operator)])
 def update_item(item_id: UUID, payload: ItemUpdate, session: SessionType):
     item = item_service.update_item(session, item_id, payload)
     if not item:
@@ -128,7 +129,7 @@ def update_item(item_id: UUID, payload: ItemUpdate, session: SessionType):
     )
 
 
-@router.delete("/{item_id}")
+@router.delete("/{item_id}", dependencies=[Depends(get_admin)])
 def delete_item(item_id: UUID, session: SessionType):
     item, action = item_service.delete_item(session, item_id)
     if not item:

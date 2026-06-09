@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlmodel import Session
 
 from app.core.database import get_session
-from app.dependencies.auth import get_current_user
+from app.dependencies.auth import get_current_active_user, get_operator
 from app.schemas.transaction import (
     TransactionInput,
     TransactionCreateDataResponse,
@@ -26,7 +26,7 @@ router = APIRouter()
 def create_transaction(
     payload: TransactionInput,
     db: Session = Depends(get_session),
-    current_user = Depends(get_current_user),
+    current_user = Depends(get_operator),
 ):
     return create_inventory_transaction(db=db, current_user=current_user, payload=payload)
 
@@ -36,6 +36,7 @@ def create_transaction(
     response_model=TransactionListDashboardResponse,
     status_code=status.HTTP_200_OK,
     summary="List transactions with dashboard overview analytics",
+    dependencies=[Depends(get_current_active_user)],
 )
 def list_transactions(
     page: int = Query(1, ge=1, description="Page number for pagination"),

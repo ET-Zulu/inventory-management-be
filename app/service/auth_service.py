@@ -32,10 +32,14 @@ def create_invite(
     invited_by: User,
     invite_in: InviteCreateRequest,
 ) -> tuple[InviteToken, str]:
-    if invite_in.role not in {UserRole.ADMIN, UserRole.OPERATOR}:
+    if invite_in.role not in {
+        UserRole.ADMIN,
+        UserRole.OPERATOR,
+        UserRole.VIEWER,
+    }:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invite role must be admin or operator.",
+            detail="Invite role must be admin, operator, or viewer.",
         )
 
     now = datetime.utcnow()

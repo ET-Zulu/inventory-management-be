@@ -49,21 +49,30 @@ def get_current_active_user(
     return current_user
 
 
-def get_admin(
-    current_user: User = Depends(get_current_active_user),
-) -> User:
-    if current_user.role != UserRole.ADMIN:
+def _require_roles(current_user: User, allowed_roles: set[UserRole]) -> User:
+    if current_user.role not in allowed_roles:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions"
         )
     return current_user
+
+
+def require_roles(*allowed_roles: UserRole):
+    def role_dependency(
+        current_user: User = Depends(get_current_active_user),
+    ) -> User:
+        return _require_roles(current_user, set(allowed_roles))
+
+    return role_dependency
+
+
+def get_admin(
+    current_user: User = Depends(get_current_active_user),
+) -> User:
+    return _require_roles(current_user, {UserRole.ADMIN})
 
 
 def get_operator(
     current_user: User = Depends(get_current_active_user),
 ) -> User:
-    if current_user.role not in [UserRole.ADMIN, UserRole.OPERATOR]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions"
-        )
-    return current_user
+    return _require_roles(current_user, {UserRole.ADMIN, UserRole.OPERATOR})

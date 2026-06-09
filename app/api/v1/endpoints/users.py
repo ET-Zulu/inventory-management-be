@@ -11,12 +11,11 @@ from app.service.auth_service import list_users
 router = APIRouter()
 
 
-@router.get("", response_model=UserListResponse)
+@router.get("", response_model=UserListResponse, dependencies=[Depends(get_admin)])
 def get_users(
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
     role: UserRole | None = Query(default=None),
     db: Session = Depends(get_session),
-    _admin_user: User = Depends(get_admin),
 ) -> UserListResponse:
     return list_users(db, page=page, limit=limit, role=role)
