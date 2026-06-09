@@ -5,6 +5,7 @@ from uuid import UUID, uuid4
 from sqlmodel import SQLModel, Field, Relationship
 
 from app.model.enums import ImportStatus
+from app.model.user import User
 
 
 class BulkImport(SQLModel, table=True):

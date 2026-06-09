@@ -5,6 +5,7 @@ from uuid import UUID, uuid4
 from sqlmodel import SQLModel, Field, Relationship
 
 from app.model.enums import UserRole
+from app.model.user import User
 
 
 class InviteToken(SQLModel, table=True):

@@ -4,7 +4,10 @@ from uuid import UUID, uuid4
 
 from sqlmodel import SQLModel, Field, Relationship
 
+from app.model.bulk_import import BulkImport
 from app.model.enums import UserRole
+from app.model.invite_token import InviteToken
+from app.model.transaction import Transaction
 
 
 class User(SQLModel, table=True):

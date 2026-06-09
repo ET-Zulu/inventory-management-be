@@ -55,7 +55,7 @@ def login_access_token(
     db: Session = Depends(get_session),
     form_data: OAuth2PasswordRequestForm = Depends(),
 ) -> Any:
-    user = db.exec(select(User).where(User.email == form_data.username)).first()
+    user = db.exec(select(User).where(User.name == form_data.username)).first()
     if user is None or not security.verify_password(form_data.password, user.password_hash):
         raise HTTPException(status_code=400, detail="Incorrect email or password")
     if not user.is_active:

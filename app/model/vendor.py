@@ -4,6 +4,8 @@ from uuid import UUID, uuid4
 
 from sqlmodel import SQLModel, Field, Relationship
 
+from app.model.item import Item
+
 
 class Vendor(SQLModel, table=True):
     __tablename__ = "vendors"
