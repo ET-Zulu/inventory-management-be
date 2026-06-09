@@ -1,11 +1,13 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from sqlmodel import SQLModel, Field, Relationship
 
 from app.model.enums import ImportStatus
-from app.model.user import User
+
+if TYPE_CHECKING:
+    from app.model.user import User
 
 
 class BulkImport(SQLModel, table=True):
