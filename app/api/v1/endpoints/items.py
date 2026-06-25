@@ -2,7 +2,9 @@ from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlmodel import Session
 
+from app.core.database import get_session
 from app.core.database import SessionType
 from app.dependencies.auth import get_admin, get_current_active_user, get_operator
 from app.schemas.common import success_response, error_response, ErrorCode
@@ -101,6 +103,13 @@ def get_items(
     )
 
 
+@router.get("/check-sku")
+def check_sku(
+    sku: str,
+    session: Session = Depends(get_session),
+):
+    return item_service.check_sku_availability(session, sku)
+
 @router.get("/{item_id}", dependencies=[Depends(get_current_active_user)])
 def get_item(item_id: UUID, session: SessionType):
     item = item_service.get_item_by_id(session, item_id)
@@ -144,3 +153,4 @@ def delete_item(item_id: UUID, session: SessionType):
         message = "Item permanently deleted"
 
     return success_response(message=message)
+
