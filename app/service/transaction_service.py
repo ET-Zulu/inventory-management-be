@@ -14,6 +14,7 @@ from app.repository.transaction_repository import (
     save_transaction,
 )
 from app.schemas.transaction import TransactionInput
+from app.service.alert_service import create_notification
 
 
 def create_inventory_transaction(
@@ -49,6 +50,17 @@ def create_inventory_transaction(
 
     item.quantity_on_hand = after_qty
     db.add(item)
+
+    if after_qty < item.minimum_stock_level:
+        create_notification(
+            db,
+            title=f"Low Stock Alert for {item.name}",
+            message=f"The stock for item '{item.name}' has fallen below the minimum threshold. Current stock: {after_qty}, Minimum threshold: {item.minimum_stock_level}.",
+            notification_type="low_stock",
+            severity="warning",
+            item_id=item.id,
+        )
+        
 
     transaction = Transaction(
         item_id=payload.item_id,

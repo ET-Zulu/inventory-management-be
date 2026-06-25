@@ -2,6 +2,8 @@ from datetime import datetime
 from typing import List, Optional, TYPE_CHECKING
 from uuid import UUID, uuid4
 
+from app.model.notification import Notification
+
 if TYPE_CHECKING:
     from app.model.transaction import Transaction
     from app.model.vendor import Vendor
@@ -54,5 +56,9 @@ class Item(SQLModel, table=True):
     )
 
     transactions: List["Transaction"] = Relationship(
+        back_populates="item"
+    )
+
+    notifications: List["Notification"] = Relationship(
         back_populates="item"
     )
