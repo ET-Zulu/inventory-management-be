@@ -1,5 +1,6 @@
 import re
 from datetime import datetime
+import re
 from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
@@ -46,6 +47,18 @@ class SetupPasswordRequest(BaseModel):
     def password_strength(cls, value: str) -> str:
         return validate_password_strength(value)
 
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, value: str) -> str:
+        if not re.fullmatch(
+            r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$",
+            value,
+        ):
+            raise ValueError(
+                "Password must include at least one uppercase letter, one lowercase letter, one number, and one special character."
+            )
+        return value
 
 class AdminSetupRequest(BaseModel):
     name: str = Field(min_length=1)
