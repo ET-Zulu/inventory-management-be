@@ -51,7 +51,7 @@ class Item(SQLModel, table=True):
         back_populates="items"
     )
 
-    vendor: Vendor = Relationship(
+    vendor: "Vendor" = Relationship(
         back_populates="items"
     )
 

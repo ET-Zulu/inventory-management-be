@@ -14,6 +14,7 @@ from app.model.invite_token import InviteToken
 from app.model.user import User
 from app.schemas.auth import InviteCreateRequest, SetupPasswordRequest
 from app.schemas.user import UserListItem, UserListResponse
+from app.service.email_service import send_invitation_email
 
 
 INVITE_TTL_HOURS = 24
@@ -76,6 +77,10 @@ def create_invite(
     db.add(invite)
     db.commit()
     db.refresh(invite)
+    
+    # Send email
+    send_invitation_email(email=invite_in.email, role=invite_in.role, raw_token=raw_token)
+    
     return invite, raw_token
 
 

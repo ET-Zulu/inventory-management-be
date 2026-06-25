@@ -35,7 +35,16 @@ def get_current_user(
             detail="Could not validate credentials",
         )
 
-    user = db.get(User, token_data.sub)
+    try:
+        from uuid import UUID
+        user_id = UUID(token_data.sub)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid token subject format",
+        )
+
+    user = db.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user

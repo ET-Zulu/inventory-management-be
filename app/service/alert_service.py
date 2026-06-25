@@ -18,14 +18,19 @@ def calculate_severity(stock: int, threshold: int) -> str:
 
 async def get_alerts_service(session: Session):
 
-    items = session.exec(select(Item)).all()
+
+    # remove N+1 query by fetching all items at once and calculating alerts in memory
+    items = session.exec(
+        select(Item).where(
+            Item.quantity_on_hand < Item.minimum_stock_level
+        )
+    ).all()
+
+    
 
     alerts = []
 
     for item in items:
-
-        if item.quantity_on_hand < item.minimum_stock_level:
-
             alerts.append({
                 "item_name": item.name,
                 "stock": item.quantity_on_hand,

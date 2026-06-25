@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from app.model.bulk_import import BulkImport
     from app.model.invite_token import InviteToken
     from app.model.transaction import Transaction
+    from app.model.refresh_token import RefreshToken
 
 
 class User(SQLModel, table=True):
@@ -36,4 +37,8 @@ class User(SQLModel, table=True):
 
     bulk_imports: List["BulkImport"] = Relationship(
         back_populates="uploader"
+    )
+
+    refresh_tokens: List["RefreshToken"] = Relationship(
+        back_populates="user"
     )
