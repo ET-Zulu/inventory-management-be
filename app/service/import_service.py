@@ -109,8 +109,17 @@ def process_csv_import(session: Session, file, user_id: UUID | None = None):
                 sku=row["sku"],
                 name=row["name"],
                 vendor_id=row["vendor_id"],
+
                 cost_price=float(row.get("cost_price", 0)),
                 selling_price=float(row.get("selling_price", 0)),
+
+                description=row.get("description"),
+                location=row.get("location", ""),
+
+                quantity_on_hand=int(row.get("quantity_on_hand", 0)),
+                minimum_stock_level=int(row.get("minimum_stock_level", 0)),
+
+                category_id=row.get("category_id") if row.get("category_id") else None
             )
             session.add(item)
 
