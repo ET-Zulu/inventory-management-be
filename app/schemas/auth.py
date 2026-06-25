@@ -1,3 +1,4 @@
+import re
 from datetime import datetime
 import re
 from uuid import UUID
@@ -5,6 +6,19 @@ from uuid import UUID
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from app.model.enums import UserRole
+
+
+PASSWORD_PATTERN = re.compile(
+    r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$"
+)
+
+
+def validate_password_strength(password: str) -> str:
+    if not PASSWORD_PATTERN.fullmatch(password):
+        raise ValueError(
+            "Password must be at least 8 characters long and include at least one uppercase letter, one lowercase letter, one number, and one special character."
+        )
+    return password
 
 
 class LoginRequest(BaseModel):
@@ -26,10 +40,13 @@ class SetupPasswordRequest(BaseModel):
     token: str
     name: str = Field(min_length=1)
     email: EmailStr
-    password: str = Field(
-        min_length=8,
-        description="Password must be at least 8 characters long and include at least one uppercase letter, one lowercase letter, one number, and one special character.",
-    )
+    password: str = Field(min_length=8)
+
+    @field_validator("password")
+    @classmethod
+    def password_strength(cls, value: str) -> str:
+        return validate_password_strength(value)
+
 
     @field_validator("password")
     @classmethod
@@ -46,24 +63,13 @@ class SetupPasswordRequest(BaseModel):
 class AdminSetupRequest(BaseModel):
     name: str = Field(min_length=1)
     email: EmailStr
-    password: str = Field(
-        min_length=8,
-        description="Password must be at least 8 characters long and include at least one uppercase letter, one lowercase letter, one number, and one special character.",
-    )
+    password: str = Field(min_length=8)
 
     @field_validator("password")
     @classmethod
-    def validate_password(cls, value: str) -> str:
-        if not re.fullmatch(
-            r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$",
-            value,
-        ):
-            raise ValueError(
-                "Password must include at least one uppercase letter, one lowercase letter, one number, and one special character."
-            )
-        return value
+    def password_strength(cls, value: str) -> str:
+        return validate_password_strength(value)
 
-  
 
 
 class SetupPasswordResponse(BaseModel):

@@ -4,12 +4,15 @@ from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
 from alembic import context
-
+import sqlmodel
 from sqlmodel import SQLModel
+from app.model.transaction import Transaction
+from app.model.item import Item
+from app.model.user import User
+from app.model.category import Category
+from app.model.vendor import Vendor
+from app.model.enums import TransactionType
 
-from app.core.database import engine
-from app.model import *  # noqa: F401
-from app.core.config import settings
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -17,8 +20,8 @@ config = context.config
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
-# if config.config_file_name is not None:
-#     fileConfig(config.config_file_name)
+if config.config_file_name is not None:
+    fileConfig(config.config_file_name)
 
 # add your model's MetaData object here
 # for 'autogenerate' support
@@ -30,11 +33,6 @@ target_metadata = SQLModel.metadata
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
-config.set_main_option(
-    "sqlalchemy.url",
-    settings.postgres_url,
-)
-
 
 
 def run_migrations_offline() -> None:

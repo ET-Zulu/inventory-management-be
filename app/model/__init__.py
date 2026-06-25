@@ -1,24 +1,13 @@
-"""Domain models package."""
+"""Domain models package.
 
-from app.model.enums import UserRole, TransactionType, ImportStatus
-from app.model.user import User
-from app.model.invite_token import InviteToken
-from app.model.category import Category
-from app.model.vendor import Vendor
-from app.model.item import Item
-from app.model.transaction import Transaction
-from app.model.bulk_import import BulkImport
+Keep this module import-light to avoid circular imports during app startup.
+"""
 
-__all__ = [
-    "UserRole",
-    "TransactionType",
-    "ImportStatus",
-    "User",
-    "InviteToken",
-    "Category",
-    "Vendor",
-    "Transaction",
-    "Item",
-    "BulkImport",
-]
-
+from .user import User
+from .item import Item
+from .category import Category
+from .transaction import Transaction
+from .vendor import Vendor
+from .bulk_import import BulkImport
+from .invite_token import InviteToken
+from .refresh_token import RefreshToken

@@ -1,10 +1,13 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from sqlmodel import SQLModel, Field, Relationship
 
 from app.model.enums import UserRole
+
+if TYPE_CHECKING:
+    from app.model.user import User
 
 
 class InviteToken(SQLModel, table=True):

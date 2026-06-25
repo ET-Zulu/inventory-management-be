@@ -1,5 +1,5 @@
 fastapi
-uvicorn
+uvicorn[standard]
 python-multipart
 python-dotenv
 sqlmodel
@@ -8,3 +8,4 @@ alembic
 psycopg2-binary
 bcrypt
 python-jose[cryptography]
+email-validator

@@ -3,6 +3,7 @@ from sqlmodel import Session
 from uuid import UUID
 
 from app.core.database import get_session
+from app.dependencies.auth import get_admin, get_current_active_user
 
 from app.schemas.vendor import VendorCreate, VendorUpdate, VendorRead
 from app.schemas.common import success_response, error_response, ErrorCode
@@ -21,7 +22,7 @@ from sqlmodel import select
 router = APIRouter(prefix="/vendors", tags=["Vendors"])
 
 
-@router.post("/")
+@router.post("/", dependencies=[Depends(get_admin)])
 def create_vendor(
     data: VendorCreate,
     session: Session = Depends(get_session)
@@ -38,7 +39,7 @@ def create_vendor(
         return error_response(ErrorCode.BAD_REQUEST, str(e))
 
 
-@router.get("/")
+@router.get("/", dependencies=[Depends(get_current_active_user)])
 def get_vendors(
     page: int = 1,
     limit: int = 20,
@@ -72,7 +73,7 @@ def get_vendors(
         data=data
     )
 
-@router.get("/{vendor_id}")
+@router.get("/{vendor_id}", dependencies=[Depends(get_current_active_user)])
 def get_vendor(
     vendor_id: UUID,
     session: Session = Depends(get_session)
@@ -103,7 +104,7 @@ def get_vendor(
         return error_response(ErrorCode.INTERNAL_ERROR, str(e))
 
 
-@router.patch("/{vendor_id}")
+@router.patch("/{vendor_id}", dependencies=[Depends(get_admin)])
 def update_vendor(
     vendor_id: UUID,
     data: VendorUpdate,
@@ -121,7 +122,7 @@ def update_vendor(
         return error_response(ErrorCode.BAD_REQUEST, str(e))
 
 
-@router.delete("/{vendor_id}")
+@router.delete("/{vendor_id}", dependencies=[Depends(get_admin)])
 def delete_vendor(
     vendor_id: UUID,
     session: Session = Depends(get_session)
