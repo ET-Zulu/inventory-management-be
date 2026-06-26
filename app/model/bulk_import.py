@@ -17,6 +17,8 @@ class BulkImport(SQLModel, table=True):
 
     file_name: str
 
+    file_link: Optional[str] = None
+
     records_processed: int = 0
 
     status: ImportStatus
