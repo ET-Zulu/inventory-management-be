@@ -16,6 +16,8 @@ class Settings:
     algorithm: str = os.getenv("ALGORITHM", "HS256")
     access_token_expire_minutes: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 
-
+    cloudinary_cloud_name: str = os.getenv("CLOUDINARY_CLOUD_NAME", "")
+    cloudinary_api_key: str = os.getenv("CLOUDINARY_API_KEY", "")
+    cloudinary_api_secret: str = os.getenv("CLOUDINARY_API_SECRET", "")
 
 settings = Settings()

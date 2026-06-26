@@ -6,6 +6,7 @@ from pathlib import Path
 import uvicorn
 from alembic import command
 from alembic.config import Config
+from app.core import cloudinary
 
 
 def run_migrations() -> None:
