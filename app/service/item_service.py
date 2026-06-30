@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Dict, Optional, Tuple
 from uuid import UUID
+import re
 
 from sqlmodel import Session
 
@@ -17,13 +18,21 @@ def derive_status(item: Item) -> str:
 
 
 def create_item(session: Session, payload) -> Item:
-    existing = item_repository.get_item_by_sku(session, payload.sku)
+    sku = payload.sku.strip().upper()
+
+    if not re.fullmatch(r"SKU-\d{3,}", sku):
+        raise ValueError("SKU must follow the format SKU-001")
+
+    existing = item_repository.get_item_by_sku(session, sku)
+
     if existing:
         if existing.is_active:
-            raise ValueError(f"SKU '{payload.sku}' already exists")
+            raise ValueError(f"SKU '{sku}' already exists")
+
         # Reactivate soft-deleted item with the new creation payload
         existing.is_active = True
         existing.deleted_at = None
+        existing.sku = sku
         existing.name = payload.name
         existing.description = payload.description
         existing.quantity_on_hand = payload.initial_stock
@@ -34,10 +43,11 @@ def create_item(session: Session, payload) -> Item:
         existing.vendor_id = payload.vendor_id
         existing.warehouse_id = payload.warehouse_id
         existing.location = payload.bin_location or ""
+
         return item_repository.save_item(session, existing)
 
     item = Item(
-        sku=payload.sku.strip(),
+        sku=sku,
         name=payload.name,
         description=payload.description,
         quantity_on_hand=payload.initial_stock,
@@ -50,6 +60,7 @@ def create_item(session: Session, payload) -> Item:
         location=payload.bin_location or "",
         Itemtypes=payload.Itemtypes
     )
+
     return item_repository.save_item(session, item)
 
 
@@ -138,4 +149,30 @@ def get_storage_capacity(session: Session) -> Dict:
         "total_capacity": total_capacity,
         "used_percent": used_percent,
         "free_percent": free_percent,
+    }
+
+def check_sku_availability(session: Session, sku: str) -> Dict:
+    sku = sku.strip().upper()
+
+    # Only allow SKU-001, SKU-002, etc.
+    if not re.fullmatch(r"SKU-\d{3,}", sku):
+        return {
+            "sku": sku,
+            "available": False,
+            "message": "SKU must follow the format SKU-001"
+        }
+
+    existing = item_repository.get_item_by_sku(session, sku)
+
+    if existing and existing.is_active:
+        return {
+            "sku": sku,
+            "available": False,
+            "message": f"{sku} is already in use"
+        }
+
+    return {
+        "sku": sku,
+        "available": True,
+        "message": f"{sku} is available"
     }

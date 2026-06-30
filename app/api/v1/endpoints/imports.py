@@ -38,7 +38,7 @@ def get_history(
             date=i.created_at,
             records=i.records_processed,
             status=i.status.value,
-            file_link=None
+            file_link=i.file_link
         )
         for i in imports
     ]
@@ -57,7 +57,7 @@ def search_history(
             date=i.created_at,
             records=i.records_processed,
             status=i.status.value,
-            file_link=None
+            file_link=i.file_link
         )
         for i in results
     ]
