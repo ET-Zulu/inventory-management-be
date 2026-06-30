@@ -1,9 +1,11 @@
 from datetime import datetime
+from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
-from sqlmodel import SQLModel, Field, Relationship
+if TYPE_CHECKING:
+    from app.model.item import Item
 
-from app.model.item import Item
+from sqlmodel import SQLModel, Field, Relationship
 
 
 class Notification(SQLModel, table=True):

@@ -18,7 +18,10 @@ class ItemCreate(BaseModel):
     selling_price: float = Field(..., ge=0)
     category_id: Optional[UUID] = None
     vendor_id: UUID
+    warehouse_id: UUID
     bin_location: Optional[str] = None
+    Itemtypes: Optional[str] = Field(default="sallable", regex="^(sallable|non_sallable)$")
+    
 
 
 class ItemUpdate(BaseModel):
@@ -30,6 +33,7 @@ class ItemUpdate(BaseModel):
     selling_price: Optional[float] = Field(default=None, ge=0)
     category_id: Optional[UUID] = None
     vendor_id: Optional[UUID] = None
+    warehouse_id: Optional[UUID] = None
     bin_location: Optional[str] = None
 
 
@@ -45,6 +49,7 @@ class ItemResponse(BaseModel):
     selling_price: float
     category_id: Optional[UUID] = None
     vendor_id: UUID
+    warehouse_id: UUID
     bin_location: Optional[str] = None
     is_active: bool
     created_at: datetime
