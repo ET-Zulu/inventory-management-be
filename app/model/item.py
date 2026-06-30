@@ -42,8 +42,8 @@ class Item(SQLModel, table=True):
     )
 
     item_type: Itemtype = Field(
-    default=Itemtype.SALLABLE
-    )   
+        default=Itemtype.SALLABLE
+    )
 
     warehouse_id: UUID = Field(
         foreign_key="warehouses.id"
