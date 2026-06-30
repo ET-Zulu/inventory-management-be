@@ -12,6 +12,7 @@ from app.model.vendor import Vendor
 from app.model.bulk_import import BulkImport
 from app.model.enums import ImportStatus
 
+from app.repository import warehouse_repository
 from app.repository.import_repository import (
     get_import_history,
     search_import_history,
@@ -29,6 +30,9 @@ def process_csv_import(session: Session, file, user_id: UUID | None = None):
     """
 
     content = file.file.read().decode("utf-8")
+
+    print(content)
+
     file.file.seek(0)
 
     upload_result = cloudinary.uploader.upload(
@@ -40,15 +44,25 @@ def process_csv_import(session: Session, file, user_id: UUID | None = None):
     file_link = upload_result.get("secure_url")
     csv_data = csv.DictReader(StringIO(content))
 
+    print(csv_data.fieldnames)
+
     errors = []
     valid_rows = []
 
     for index, row in enumerate(csv_data, start=1):
+
+         # Skip completely empty rows
+        if not any(value.strip() for value in row.values() if value):
+                continue
+        
+        print(row)
+
         row_errors = []
 
-        sku = row.get("sku")
-        name = row.get("name")
-        vendor_id = row.get("vendor_id")
+        sku = row.get("sku", "").strip()
+        name = row.get("name", "").strip()
+        vendor_id = row.get("vendor_id", "").strip()
+        item_type = row.get("item_type", "SALLABLE").strip().upper()
 
         # Required field validation
         if not sku:
@@ -70,6 +84,13 @@ def process_csv_import(session: Session, file, user_id: UUID | None = None):
                 "row": index,
                 "field": "vendor_id",
                 "message": "Missing vendor"
+            })
+        
+        if item_type not in ["SALLABLE", "NON_SALLABLE"]:
+            row_errors.append({
+                "row": index,
+                "field": "item_type",
+                "message": "Invalid item type. Must be 'SALLABLE' or 'NON_SALLABLE'"
             })
 
         # Vendor validation
@@ -117,10 +138,23 @@ def process_csv_import(session: Session, file, user_id: UUID | None = None):
     try:
         # Insert all items
         for row in valid_rows:
+
+            # print(row)
+
+            if not row.get("location"):
+                raise ValueError(f"Missing warehouse location for SKU '{row.get('sku')}'")
+
+            existing = warehouse_repository.get_warehouse_by_name(session, row.get("location"))
+
+            if not existing:
+                raise ValueError(f"Warehouse '{row.get("location")}' does not exist")
+
             item = Item(
                 sku=row["sku"],
                 name=row["name"],
                 vendor_id=row["vendor_id"],
+
+                item_type=row.get("item_type", "SALLABLE").upper(),
 
                 cost_price=float(row.get("cost_price", 0)),
                 selling_price=float(row.get("selling_price", 0)),
@@ -131,7 +165,10 @@ def process_csv_import(session: Session, file, user_id: UUID | None = None):
                 quantity_on_hand=int(row.get("quantity_on_hand", 0)),
                 minimum_stock_level=int(row.get("minimum_stock_level", 0)),
 
+                warehouse_id= existing.id,
+
                 category_id=row.get("category_id") if row.get("category_id") else None
+                
             )
             session.add(item)
 

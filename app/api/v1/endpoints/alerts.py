@@ -60,6 +60,13 @@ async def websocket_endpoint(
 async def get_alerts(session: Session = Depends(get_session)):
     return await get_alerts_service(session)
 
+@router.get("/test-broadcast")
+async def test_broadcast():
+    await manager.broadcast({
+        "message": "Hello WebSocket!"
+    })
+    return {"success": True}
+
 @router.get("/alerts/notifications", dependencies=[Depends(get_current_active_user)])
 def get_notifications(session: Session = Depends(get_session)):
     return get_notifications_service(session)

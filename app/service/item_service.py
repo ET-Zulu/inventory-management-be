@@ -6,7 +6,7 @@ import re
 from sqlmodel import Session
 
 from app.model.item import Item
-from app.repository import item_repository
+from app.repository import item_repository, warehouse_repository
 
 
 def derive_status(item: Item) -> str:
@@ -45,6 +45,11 @@ def create_item(session: Session, payload) -> Item:
         existing.location = payload.bin_location or ""
 
         return item_repository.save_item(session, existing)
+    
+    existing = warehouse_repository.get_warehouse_by_name(session, payload.bin_location)
+
+    if not existing:
+        raise ValueError(f"Warehouse '{payload.bin_location}' does not exist")
 
     item = Item(
         sku=sku,

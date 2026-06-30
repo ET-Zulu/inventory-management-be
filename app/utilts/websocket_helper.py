@@ -32,12 +32,16 @@ class ConnectionManager:
             self.active_connections.remove(websocket)
 
     async def broadcast(self, message: dict):
+        print("📢 Broadcast called")
+        print("Connections:", len(self.active_connections))
         disconnected = []
 
         for connection in self.active_connections:
             try:
                 await connection.send_json(message)
+                print("📤 SENT TO CLIENT")
             except Exception:
+                print("❌ SEND FAILED:")
                 disconnected.append(connection)
 
         for conn in disconnected:

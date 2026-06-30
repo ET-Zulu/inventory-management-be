@@ -58,7 +58,7 @@ async def create_notification(
     severity: str,
     item_id=None
 ):
-
+    print("🟢 create_notification() called")
     existing = session.exec(
         select(Notification).where(
             Notification.type == notification_type,
@@ -82,6 +82,8 @@ async def create_notification(
     session.commit()
     session.refresh(notification)
 
+    print("🟢 About to broadcast")
+
     await manager.broadcast({
         "event": "NEW_NOTIFICATION",
         "notification": {
@@ -94,6 +96,8 @@ async def create_notification(
             "created_at": notification.created_at.isoformat()
         }
     })
+
+    print("🟢 Broadcast completed")
 
     return notification
 
