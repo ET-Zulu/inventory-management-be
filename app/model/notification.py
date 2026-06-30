@@ -3,7 +3,7 @@ from uuid import UUID, uuid4
 
 from sqlmodel import SQLModel, Field, Relationship
 
-from app.model.item import Item
+# from app.model.item import Item
 
 
 class Notification(SQLModel, table=True):
