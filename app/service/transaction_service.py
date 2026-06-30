@@ -3,7 +3,7 @@ from typing import Optional
 from fastapi import HTTPException, status
 from sqlmodel import Session
 
-from app.model.enums import TransactionType
+from app.model.enums import Itemtype, TransactionType
 from app.model.item import Item
 from app.model.transaction import Transaction
 from app.model.user import User
@@ -17,7 +17,7 @@ from app.schemas.transaction import TransactionInput
 from app.service.alert_service import create_notification
 
 
-def create_inventory_transaction(
+async def create_inventory_transaction(
     db: Session,
     current_user: User,
     payload: TransactionInput,
@@ -29,7 +29,7 @@ def create_inventory_transaction(
             detail="Target active inventory item could not be found.",
         )
     
-    if item.Itemtypes == TransactionType.NON_SALLABLE:
+    if item.item_type == Itemtype.NON_SALLABLE:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Transactions cannot be performed on non-sallable items.",
@@ -58,15 +58,14 @@ def create_inventory_transaction(
     db.add(item)
 
     if after_qty < item.minimum_stock_level:
-        create_notification(
+        await create_notification(
             db,
             title=f"Low Stock Alert for {item.name}",
             message=f"The stock for item '{item.name}' has fallen below the minimum threshold. Current stock: {after_qty}, Minimum threshold: {item.minimum_stock_level}.",
             notification_type="low_stock",
             severity="warning",
             item_id=item.id,
-        )
-        
+            )
 
     transaction = Transaction(
         item_id=payload.item_id,

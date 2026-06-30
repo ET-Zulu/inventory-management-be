@@ -23,12 +23,12 @@ router = APIRouter()
     status_code=status.HTTP_201_CREATED,
     summary="Create a new stock transaction ledger entry",
 )
-def create_transaction(
+async def create_transaction(
     payload: TransactionInput,
     db: Session = Depends(get_session),
     current_user = Depends(get_operator),
 ):
-    return create_inventory_transaction(db=db, current_user=current_user, payload=payload)
+    return await create_inventory_transaction(db=db, current_user=current_user, payload=payload)
 
 
 @router.get(

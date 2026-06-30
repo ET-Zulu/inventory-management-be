@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends
+from fastapi.params import Query
 from sqlmodel import Session
 
 from app.core.database import get_session
@@ -12,8 +13,39 @@ from app.utilts.websocket_helper import manager
 
 router = APIRouter(tags=["alerts"])
 
+from fastapi import WebSocket, WebSocketDisconnect, Query, status
+from jose import jwt, JWTError
+from app.core.config import settings
+
+
 @router.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
+async def websocket_endpoint(
+    websocket: WebSocket,
+    token: str = Query(None)
+):
+    # 1. Reject if no token
+    if not token:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+
+    # 2. Validate JWT
+    try:
+        payload = jwt.decode(
+            token,
+            settings.secret_key,
+            algorithms=[settings.algorithm]
+        )
+
+        user_id: str = payload.get("sub")
+        if not user_id:
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+            return
+
+    except JWTError:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+
+    # 3. Accept ONLY after auth passes
     await manager.connect(websocket)
 
     try:
@@ -25,8 +57,8 @@ async def websocket_endpoint(websocket: WebSocket):
 
 
 @router.get("/alerts", dependencies=[Depends(get_current_active_user)])
-def get_alerts(session: Session = Depends(get_session)):
-    return get_alerts_service(session)
+async def get_alerts(session: Session = Depends(get_session)):
+    return await get_alerts_service(session)
 
 @router.get("/alerts/notifications", dependencies=[Depends(get_current_active_user)])
 def get_notifications(session: Session = Depends(get_session)):

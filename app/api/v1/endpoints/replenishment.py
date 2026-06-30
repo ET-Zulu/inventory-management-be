@@ -19,5 +19,5 @@ def get_replenishment(
 
 
 @router.get("/alerts", dependencies=[Depends(get_current_active_user)])
-def get_alerts(session: Session = Depends(get_session)):
-    return get_alerts_service(session)
+async def get_alerts(session: Session = Depends(get_session)):
+    return await get_alerts_service(session)
