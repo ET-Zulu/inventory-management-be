@@ -89,6 +89,7 @@ def get_transaction_ledger(
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
 ) -> dict:
+
     tx_filter: Optional[TransactionType] = None
     if tx_type:
         try:
@@ -99,7 +100,7 @@ def get_transaction_ledger(
                 detail="Unsupported transaction type filter provided.",
             )
 
-    transactions = fetch_transaction_ledger(
+    transactions, total = fetch_transaction_ledger(
         db,
         page=page,
         limit=limit,
@@ -119,7 +120,6 @@ def get_transaction_ledger(
             "transaction_type": tx.transaction_type,
             "quantity_change": tx.quantity_change,
             "Opratore_name": tx.user.name,
-            # notes removed from DB schema; omit from output
             "before_quantity": tx.before_quantity,
             "after_quantity": tx.after_quantity,
             "created_at": tx.created_at,
@@ -132,5 +132,11 @@ def get_transaction_ledger(
         "inbound_24h": metrics["inbound_24h"],
         "outbound_24h": metrics["outbound_24h"],
         "anomalies": metrics["anomalies"],
+
+        # NEW PAGINATION BLOCK
+        "page": page,
+        "limit": limit,
+        "total": total,
+
         "data": records,
     }

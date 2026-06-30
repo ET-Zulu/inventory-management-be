@@ -31,30 +31,46 @@ def fetch_transaction_ledger(
     tx_type: Optional[TransactionType] = None,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
-) -> list[Transaction]:
+) -> tuple[list[Transaction], int]:
     statement = select(Transaction).join(Item).join(User)
+    count_statement = select(func.count()).select_from(Transaction)
 
     if search:
         search_text = f"%{search}%"
-        statement = statement.where(
-            or_(
-                cast(Transaction.item_id, String).ilike(search_text),
-                col(Item.sku).ilike(search_text),
-                col(Item.name).ilike(search_text),
-            )
+        filter_cond = or_(
+            cast(Transaction.item_id, String).ilike(search_text),
+            col(Item.sku).ilike(search_text),
+            col(Item.name).ilike(search_text),
         )
+        statement = statement.where(filter_cond)
+        count_statement = count_statement.where(filter_cond)
 
     if tx_type:
         statement = statement.where(Transaction.transaction_type == tx_type)
+        count_statement = count_statement.where(Transaction.transaction_type == tx_type)
 
     if start_date:
-        statement = statement.where(Transaction.created_at >= datetime.fromisoformat(start_date))
+        dt = datetime.fromisoformat(start_date)
+        statement = statement.where(Transaction.created_at >= dt)
+        count_statement = count_statement.where(Transaction.created_at >= dt)
+
     if end_date:
-        statement = statement.where(Transaction.created_at <= datetime.fromisoformat(end_date))
+        dt = datetime.fromisoformat(end_date)
+        statement = statement.where(Transaction.created_at <= dt)
+        count_statement = count_statement.where(Transaction.created_at <= dt)
+
+    total = session.exec(count_statement).one()
 
     offset = (page - 1) * limit
-    statement = statement.order_by(desc(Transaction.created_at)).offset(offset).limit(limit)
-    return session.exec(statement).all() # type: ignore
+    statement = (
+        statement.order_by(desc(Transaction.created_at))
+        .offset(offset)
+        .limit(limit)
+    )
+
+    data = session.exec(statement).all()
+
+    return data, total or 0
 
 
 def _scalar_value(session: Session, statement) -> int:

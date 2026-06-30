@@ -1,3 +1,6 @@
+import cloudinary
+import cloudinary.uploader
+
 import csv
 from io import StringIO
 from uuid import UUID
@@ -26,6 +29,15 @@ def process_csv_import(session: Session, file, user_id: UUID | None = None):
     """
 
     content = file.file.read().decode("utf-8")
+    file.file.seek(0)
+
+    upload_result = cloudinary.uploader.upload(
+    file.file,
+    resource_type="raw",
+    folder="inventory-imports"
+    )
+
+    file_link = upload_result.get("secure_url")
     csv_data = csv.DictReader(StringIO(content))
 
     errors = []
@@ -128,7 +140,9 @@ def process_csv_import(session: Session, file, user_id: UUID | None = None):
             file_name=file.filename,
             records_processed=len(valid_rows),
             status=ImportStatus.SUCCESS,
-            uploaded_by=user_id
+            uploaded_by=user_id,
+            file_link=file_link
+            
         )
 
         session.add(bulk_import)

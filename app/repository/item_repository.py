@@ -1,5 +1,6 @@
 from typing import List, Optional, Tuple
 from uuid import UUID
+import re
 
 from sqlalchemy import func, or_
 from sqlmodel import Session, select
@@ -9,9 +10,11 @@ from app.model.transaction import Transaction
 
 
 def get_item_by_sku(session: Session, sku: str) -> Optional[Item]:
-	return session.exec(
-		select(Item).where(Item.sku == sku.strip())
-	).first()
+    return session.exec(
+        select(Item).where(
+            func.lower(Item.sku) == sku.strip().lower()
+        )
+    ).first()
 
 
 def get_item_by_id(session: Session, item_id: UUID) -> Optional[Item]:

@@ -64,4 +64,9 @@ class TransactionListDashboardResponse(BaseModel):
     inbound_24h: int
     outbound_24h: int
     anomalies: int
+
+    page: int = Field(..., description="Current page number")
+    limit: int = Field(..., description="Items per page")
+    total: int = Field(..., description="Total number of transactions")
+
     data: list[TransactionListItemResponse]
