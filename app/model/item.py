@@ -2,6 +2,8 @@ from datetime import datetime
 from typing import List, Optional, TYPE_CHECKING
 from uuid import UUID, uuid4
 
+from app.model.enums import Itemtype
+
 if TYPE_CHECKING:
     from app.model.transaction import Transaction
     from app.model.vendor import Vendor
@@ -37,6 +39,10 @@ class Item(SQLModel, table=True):
 
     vendor_id: UUID = Field(
         foreign_key="vendors.id"
+    )
+
+    Itemtypes: Itemtype = Field(
+        default=Itemtype.SALLABLE
     )
 
     warehouse_id: UUID = Field(
