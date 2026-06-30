@@ -20,6 +20,8 @@ class ItemCreate(BaseModel):
     vendor_id: UUID
     warehouse_id: UUID
     bin_location: Optional[str] = None
+    Itemtypes: Optional[str] = Field(default="sallable", regex="^(sallable|non_sallable)$")
+    
 
 
 class ItemUpdate(BaseModel):

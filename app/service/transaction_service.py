@@ -28,6 +28,12 @@ def create_inventory_transaction(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Target active inventory item could not be found.",
         )
+    
+    if item.Itemtypes == TransactionType.NON_SALLABLE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Transactions cannot be performed on non-sallable items.",
+        )
 
     before_qty = item.quantity_on_hand
     if payload.transaction_type == TransactionType.INBOUND:

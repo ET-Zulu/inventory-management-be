@@ -48,6 +48,7 @@ def create_item(session: Session, payload) -> Item:
         vendor_id=payload.vendor_id,
         warehouse_id=payload.warehouse_id,
         location=payload.bin_location or "",
+        Itemtypes=payload.Itemtypes
     )
     return item_repository.save_item(session, item)
 
