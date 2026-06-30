@@ -32,6 +32,7 @@ def _item_to_response(item) -> dict:
         selling_price=item.selling_price,
         category_id=item.category_id,
         vendor_id=item.vendor_id,
+        warehouse_id=item.warehouse_id,
         bin_location=item.location or None,
         is_active=item.is_active,
         created_at=item.created_at,

@@ -32,6 +32,7 @@ def create_item(session: Session, payload) -> Item:
         existing.selling_price = payload.selling_price
         existing.category_id = payload.category_id
         existing.vendor_id = payload.vendor_id
+        existing.warehouse_id = payload.warehouse_id
         existing.location = payload.bin_location or ""
         return item_repository.save_item(session, existing)
 
@@ -45,6 +46,7 @@ def create_item(session: Session, payload) -> Item:
         selling_price=payload.selling_price,
         category_id=payload.category_id,
         vendor_id=payload.vendor_id,
+        warehouse_id=payload.warehouse_id,
         location=payload.bin_location or "",
     )
     return item_repository.save_item(session, item)
