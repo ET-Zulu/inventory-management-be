@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from app.model.invite_token import InviteToken
     from app.model.transaction import Transaction
     from app.model.refresh_token import RefreshToken
+    from app.model.password_reset_token import PasswordResetToken
 
 
 class User(SQLModel, table=True):
@@ -26,7 +27,11 @@ class User(SQLModel, table=True):
 
     is_active: bool = True
 
+    profile_picture: str | None = Field(default=None)
+    last_login: datetime | None = Field(default=None)
+
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
     transactions: List["Transaction"] = Relationship(
         back_populates="user"
     )
@@ -40,5 +45,9 @@ class User(SQLModel, table=True):
     )
 
     refresh_tokens: List["RefreshToken"] = Relationship(
+        back_populates="user"
+    )
+
+    password_reset_tokens: List["PasswordResetToken"] = Relationship(
         back_populates="user"
     )
