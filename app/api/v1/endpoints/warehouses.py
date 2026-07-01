@@ -42,10 +42,10 @@ def get_warehouses(
     )
 
 
-@router.get("/check-warehouse-name")
+@router.get("/check-warehouse-name" , dependencies=[Depends(get_current_active_user)])
 def check_warehouse_name(
     name: str,
-    session: SessionType = Depends(get_session),
+    session: SessionType
 ):
     return warehouse_service.check_warehouse_name_availability(session, name)
 
