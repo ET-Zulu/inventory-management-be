@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from uuid import UUID
 
 from sqlmodel import Session
@@ -33,9 +33,9 @@ def create_category(session: Session, payload) -> Category:
     return category_repository.save_category(session, category)
 
 
-def get_all_categories(session: Session) -> List[CategoryResponse]:
-    categories = category_repository.get_all_active_categories(session)
-    return [_to_response(session, cat) for cat in categories]
+def get_all_categories(session: Session, page: int, limit: int) -> Tuple[List[CategoryResponse], int]:
+    categories, total = category_repository.get_all_active_categories(session, page, limit)
+    return [_to_response(session, category) for category in categories], total
 
 
 def get_category_by_id(session: Session, category_id: UUID) -> Optional[CategoryResponse]:

@@ -4,6 +4,7 @@ from sqlmodel import Session
 
 from app.core.database import get_session
 from app.dependencies.auth import get_current_active_user
+from app.schemas.common import success_response
 from app.service.alert_service import get_alerts_service, get_notifications_service, get_unread_count_service, mark_all_read_service, mark_notification_read_service
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
@@ -57,8 +58,16 @@ async def websocket_endpoint(
 
 
 @router.get("/alerts", dependencies=[Depends(get_current_active_user)])
-async def get_alerts(session: Session = Depends(get_session)):
-    return await get_alerts_service(session)
+async def get_alerts(session: Session = Depends(get_session), page: int = 1, limit: int = 20):
+    result = await get_alerts_service(session, page=page, limit=limit)
+
+    return {
+        "message": "Alerts retrieved successfully",
+        "data": result["alerts"],
+        "total": result["total"],
+        "page": result["page"],
+        "limit": result["limit"]
+    }
 
 @router.get("/test-broadcast")
 async def test_broadcast():

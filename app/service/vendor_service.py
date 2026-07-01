@@ -64,12 +64,14 @@ def list_vendors_service(
 
     skip = (page - 1) * limit
 
-    return get_all_vendors(
+    vendors, _total = get_all_vendors(
         session=session,
         skip=skip,
         limit=limit,
         search=search
     )
+
+    return vendors, _total
 
 def update_vendor_service(session: Session, vendor_id: UUID, data: VendorUpdate):
 

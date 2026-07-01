@@ -11,10 +11,21 @@ def get_category_by_name(session: Session, name: str) -> Optional[Category]:
     ).first()
 
 
-def get_all_active_categories(session: Session) -> List[Category]:
-    return session.exec(
-        select(Category).where(Category.is_active == True)  # noqa: E712
+def get_all_active_categories(session: Session ,page: int,limit: int,) -> List[Category]:
+    
+    offset = (page - 1) * limit
+    data =session.exec(
+        select(Category).where(Category.is_active == True).offset(offset).limit(limit)  # noqa: E712
     ).all()
+
+    total = session.exec(
+        select(func.count()).select_from(Category).where(Category.is_active == True) 
+     )
+    
+    return data , total.one()
+
+
+
 
 
 def get_category_by_id(session: Session, category_id: UUID) -> Optional[Category]:

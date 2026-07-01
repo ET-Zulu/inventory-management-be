@@ -4,13 +4,14 @@ from typing import Any, Optional
 from app.schemas.response import ApiResponse, ErrorDetail, SuccessResponse, ErrorResponse
 
 
-def success_response(message: str = "Success", data: Any = None) -> dict:
+def success_response(message: str = "Success", data: Any = None , total: Optional[int] = None) -> dict:
     """
     Create a standardized success response.
     
     Args:
         message: Success message
         data: Response data
+        total: Total number of items (for pagination)
         
     Returns:
         Standardized success response dict
@@ -18,7 +19,8 @@ def success_response(message: str = "Success", data: Any = None) -> dict:
     return {
         "success": True,
         "message": message,
-        "data": data
+        "data": data,
+        "total": total
     }
 
 

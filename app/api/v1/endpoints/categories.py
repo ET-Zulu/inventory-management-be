@@ -28,12 +28,13 @@ def create_category(payload: CategoryCreate, session: SessionType):
 
 
 @router.get("", dependencies=[Depends(get_current_active_user)])
-def get_categories(session: SessionType):
-    categories = category_service.get_all_categories(session)
+def get_categories(session: SessionType , page: int = 1, limit: int = 10):
+    categories, _total = category_service.get_all_categories(session, page=page, limit=limit)
     return success_response(
         message="Categories retrieved successfully",
         data=[cat.model_dump() for cat in categories],
-    )
+        total=_total
+    ) 
 
 
 @router.get("/{category_id}", dependencies=[Depends(get_current_active_user)])

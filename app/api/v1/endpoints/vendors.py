@@ -47,7 +47,7 @@ def get_vendors(
     session: Session = Depends(get_session)
 ):
 
-    vendors = list_vendors_service(
+    vendors , _total = list_vendors_service(
         session=session,
         page=page,
         limit=limit,
@@ -70,7 +70,8 @@ def get_vendors(
 
     return success_response(
         message="Vendors fetched successfully",
-        data=data
+        data=data,
+        total=_total
     )
 
 @router.get("/{vendor_id}", dependencies=[Depends(get_current_active_user)])

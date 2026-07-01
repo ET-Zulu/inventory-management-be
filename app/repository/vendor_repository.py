@@ -46,7 +46,11 @@ def get_all_vendors(
 
     query = query.offset(skip).limit(limit)
 
-    return session.exec(query).all()
+    total_query = select(func.count()).select_from(Vendor).where(
+        Vendor.is_active == True
+    )
+
+    return session.exec(query).all(), session.exec(total_query).one()
 
 
 def update_vendor(session: Session, vendor: Vendor) -> Vendor:
