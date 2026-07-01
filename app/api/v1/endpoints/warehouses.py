@@ -1,11 +1,12 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 
+from app.core.database import get_session
 from app.core.database import SessionType
 from app.dependencies.auth import get_admin, get_current_active_user
 from app.schemas.common import success_response, error_response, ErrorCode
-from app.schemas.warehouse import WarehouseCreate, WarehouseUpdate
+from app.schemas.warehouse import WarehouseCreate, WarehouseListResponse, WarehouseUpdate
 from app.service import warehouse_service
 
 router = APIRouter(prefix="/warehouses", tags=["Warehouses"])
@@ -28,12 +29,25 @@ def create_warehouse(payload: WarehouseCreate, session: SessionType):
 
 
 @router.get("", dependencies=[Depends(get_current_active_user)])
-def get_warehouses(session: SessionType):
-    warehouses = warehouse_service.get_all_warehouses(session)
+def get_warehouses(
+    session: SessionType,
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=20, ge=1, le=100),
+):
+    result = warehouse_service.get_all_warehouses(session, page=page, limit=limit)
+    response_data = WarehouseListResponse(**result).model_dump()
     return success_response(
         message="Warehouses retrieved successfully",
-        data=[w.model_dump() for w in warehouses],
+        data=response_data,
     )
+
+
+@router.get("/check-warehouse-name")
+def check_warehouse_name(
+    name: str,
+    session: SessionType = Depends(get_session),
+):
+    return warehouse_service.check_warehouse_name_availability(session, name)
 
 
 @router.get("/{warehouse_id}", dependencies=[Depends(get_current_active_user)])

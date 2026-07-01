@@ -1,7 +1,7 @@
 """Warehouse schemas."""
 
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -39,3 +39,12 @@ class WarehouseResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class WarehouseListResponse(BaseModel):
+    """Schema for paginated warehouse list responses."""
+
+    data: List[WarehouseResponse]
+    page: int
+    limit: int
+    total: int

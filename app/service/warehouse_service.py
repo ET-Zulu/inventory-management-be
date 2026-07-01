@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import Dict, List, Optional
 from uuid import UUID
 
 from sqlmodel import Session
@@ -46,9 +46,19 @@ def create_warehouse(session: Session, payload) -> Warehouse:
     return warehouse_repository.save_warehouse(session, warehouse)
 
 
-def get_all_warehouses(session: Session) -> List[WarehouseResponse]:
-    warehouses = warehouse_repository.get_all_active_warehouses(session)
-    return [_to_response(session, w) for w in warehouses]
+def get_all_warehouses(
+    session: Session,
+    *,
+    page: int = 1,
+    limit: int = 20,
+) -> Dict:
+    warehouses, total = warehouse_repository.get_filtered_warehouses(session, page, limit)
+    return {
+        "data": [_to_response(session, w) for w in warehouses],
+        "page": page,
+        "limit": limit,
+        "total": total,
+    }
 
 
 def get_warehouse_by_id(session: Session, warehouse_id: UUID) -> Optional[WarehouseResponse]:
@@ -81,3 +91,29 @@ def delete_warehouse(session: Session, warehouse_id: UUID) -> Optional[Warehouse
     warehouse.is_active = False
     warehouse.deleted_at = datetime.utcnow()
     return warehouse_repository.save_warehouse(session, warehouse)
+
+
+def check_warehouse_name_availability(session: Session, name: str) -> Dict:
+    name = name.strip()
+
+    if not name:
+        return {
+            "name": name,
+            "available": False,
+            "message": "Warehouse name cannot be empty",
+        }
+
+    existing = warehouse_repository.get_warehouse_by_name(session, name)
+
+    if existing and existing.is_active:
+        return {
+            "name": name,
+            "available": False,
+            "message": f"Warehouse '{name}' is already in use",
+        }
+
+    return {
+        "name": name,
+        "available": True,
+        "message": f"Warehouse '{name}' is available",
+    }
