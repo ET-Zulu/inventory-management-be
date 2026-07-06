@@ -117,3 +117,37 @@ def check_warehouse_name_availability(session: Session, name: str) -> Dict:
         "available": True,
         "message": f"Warehouse '{name}' is available",
     }
+
+
+# def get_total_items_per_warehouse(session: Session) -> Dict:
+#     """Get total active item count grouped by warehouse."""
+#     rows = warehouse_repository.count_items_per_warehouse(session)
+
+#     data = [
+#         {
+#             "warehouse_id": warehouse_id,
+#             "warehouse_name": warehouse_name,
+#             "total_items": int(total_items or 0),
+#         }
+#         for warehouse_id, warehouse_name, total_items in rows
+#     ]
+
+#     return {"data": data}
+
+
+def get_total_items_per_warehouse_by_id(
+    session: Session, warehouse_id: UUID
+) -> Optional[Dict]:
+    warehouse = warehouse_repository.get_warehouse_by_id(session, warehouse_id)
+    if not warehouse:
+        return None
+
+    total_items = warehouse_repository.count_items_in_warehouse(session, warehouse_id)
+
+    return {
+        "warehouse_id": warehouse.id,
+        "warehouse_name": warehouse.name,
+        "total_items": int(total_items or 0),
+    }
+
+

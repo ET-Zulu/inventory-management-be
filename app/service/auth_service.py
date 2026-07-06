@@ -61,7 +61,7 @@ def create_invite(
     existing_active_invite = db.exec(
         select(InviteToken).where(
             InviteToken.email == invite_in.email,
-            InviteToken.used_at.is_(None),
+            InviteToken.used_at.is_(None), #type: ignore
             InviteToken.expires_at > now,
         )
     ).first()
@@ -170,13 +170,13 @@ def list_users(
     active_now = db.exec(
         select(func.count()).select_from(User).where(
             *filters,
-            User.is_active.is_(True),
+            User.is_active.is_(True), #type: ignore
         )
     ).one()
 
     now = datetime.utcnow()
     pending_filters = [
-        InviteToken.used_at.is_(None),
+        InviteToken.used_at.is_(None), #type: ignore
         InviteToken.expires_at > now,
     ]
     if role is not None:
@@ -190,7 +190,7 @@ def list_users(
     users = db.exec(
         select(User)
         .where(*filters)
-        .order_by(User.created_at.desc())
+        .order_by(User.created_at.desc())  #type: ignore
         .offset(offset)
         .limit(limit)
     ).all()
@@ -208,7 +208,17 @@ def list_users(
 # ---------------------------------------------------------------------------
 
 def get_me(user: User) -> MeResponse:
-    return MeResponse.model_validate(user)
+    # Build explicitly to avoid any SQLModel/Pydantic attribute mismatches.
+    return MeResponse(
+        id=user.id,
+        name=user.name,
+        email=user.email,
+        role=user.role,
+        profile_picture=user.profile_picture,
+        created_at=user.created_at,
+        last_login=user.last_login,
+    )
+
 
 
 def edit_profile(db: Session, user: User, payload: EditProfileRequest) -> MeResponse:

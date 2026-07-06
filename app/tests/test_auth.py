@@ -1,7 +1,8 @@
 import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, create_engine
-from app.main import app
+#from app.main import app
+from main import app
 from app.core.database import get_session
 from app.model.user import User
 from app.model.refresh_token import RefreshToken
@@ -101,3 +102,8 @@ def test_invite_email(client: TestClient, test_user: User):
     )
     assert invite_resp.status_code == 200
     assert "invite_token" in invite_resp.json()
+
+def get_current_user(client: TestClient, test_user: User):
+    user = client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {get_access_token(client, test_user)}"})
+    assert user.status_code == 200
+    

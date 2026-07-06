@@ -48,3 +48,27 @@ class WarehouseListResponse(BaseModel):
     page: int
     limit: int
     total: int
+
+
+class WarehouseItemsCount(BaseModel):
+    """Schema for total active items per warehouse."""
+
+    warehouse_id: UUID
+    warehouse_name: str
+    total_items: int
+
+
+class WarehouseItemsCountListResponse(BaseModel):
+    """Schema for warehouse items count list responses."""
+
+    data: List[WarehouseItemsCount]
+
+
+class WarehouseItemsCountResponse(BaseModel):
+    """Schema for warehouse items count response."""
+
+    warehouse_id: UUID
+    warehouse_name: str
+    total_items: int
+
+
