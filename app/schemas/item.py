@@ -17,8 +17,8 @@ class ItemCreate(BaseModel):
     cost_price: float = Field(..., ge=0)
     selling_price: float = Field(..., ge=0)
     category_id: Optional[UUID] = None
-    vendor_id: UUID
-    warehouse_id: UUID
+    vendor_id: Optional[UUID] = None
+    warehouse_id: Optional[UUID] = None
     bin_location: Optional[str] = None
     Itemtypes: Optional[str] = Field(default="SALLABLE")  # New field for item type
     

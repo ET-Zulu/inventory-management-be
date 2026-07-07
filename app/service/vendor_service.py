@@ -1,3 +1,4 @@
+from typing import Optional
 from sqlmodel import Session, select
 from uuid import UUID
 
@@ -112,6 +113,25 @@ def update_vendor_service(session: Session, vendor_id: UUID, data: VendorUpdate)
     return update_vendor(session, vendor)
 
 
+def get_vendor_summary(session: Session, vendor_id: UUID) -> Optional[dict]:
+    vendor = get_vendor_by_id(session, vendor_id)
+    if not vendor:
+        return None
+
+    items = session.exec(
+        select(Item).where(Item.vendor_id == vendor_id, Item.is_active == True)  # noqa: E712
+    ).all()
+
+    return {
+        "vendor_id": str(vendor.id),
+        "vendor_name": vendor.name,
+        "total_items": len(items),
+        "total_inventory_quantity": sum(item.quantity_on_hand for item in items),
+        "low_stock_items": [item.id for item in items if item.quantity_on_hand <= item.minimum_stock_level],
+        "items": [item.id for item in items],
+    }
+
+
 def delete_vendor_service(session: Session, vendor_id: UUID):
 
     vendor = get_vendor_by_id(session, vendor_id)
@@ -120,10 +140,12 @@ def delete_vendor_service(session: Session, vendor_id: UUID):
         raise ValueError("VENDOR_NOT_FOUND")
 
     item_exists = session.exec(
-        select(Item.id).where(Item.vendor_id == vendor_id)
+        select(Item.id).where(Item.vendor_id == vendor_id, Item.is_active == True)  # noqa: E712
     ).first()
 
     if item_exists:
-        raise ValueError("VENDOR_HAS_ITEMS")
+        raise ValueError(
+            "Cannot delete vendor because it is referenced by existing items."
+        )
 
     return delete_vendor(session, vendor)

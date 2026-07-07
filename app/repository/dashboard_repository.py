@@ -4,8 +4,10 @@ from uuid import UUID
 from sqlalchemy import cast, extract, func, or_, String, case
 from sqlmodel import Session, select, col, desc
 
+from app.model.category import Category
 from app.model.item import Item
 from app.model.vendor import Vendor
+from app.model.warehouse import Warehouse
 from app.model.transaction import Transaction
 from app.model.enums import TransactionType
 
@@ -15,26 +17,43 @@ def get_dashboard_summary_metrics(session: Session) -> dict[str, Any]:
         select(func.count()).select_from(Item).where(col(Item.is_active) == True)
     ).first() or 0
 
+    total_categories = session.exec(
+        select(func.count()).select_from(Category).where(col(Category.is_active) == True)
+    ).first() or 0
+
+    total_vendors = session.exec(
+        select(func.count()).select_from(Vendor).where(col(Vendor.is_active) == True)
+    ).first() or 0
+
+    total_warehouses = session.exec(
+        select(func.count()).select_from(Warehouse).where(col(Warehouse.is_active) == True)
+    ).first() or 0
+
     low_stock = session.exec(
         select(func.count()).select_from(Item).where(
             col(Item.is_active) == True,
-            col(Item.quantity_on_hand) <= 10
+            col(Item.quantity_on_hand) <= col(Item.minimum_stock_level)
         )
     ).first() or 0
 
-    inventory_value = session.exec(
-        select(func.sum(col(Item.quantity_on_hand) * col(Item.cost_price)))
+    inventory_quantity = session.exec(
+        select(func.coalesce(func.sum(col(Item.quantity_on_hand)), 0)).where(col(Item.is_active) == True)
     ).first() or 0
 
-    active_vendors = session.exec(
-        select(func.count()).select_from(Vendor).where(col(Vendor.is_active) == True)
+    inventory_value = session.exec(
+        select(func.coalesce(func.sum(col(Item.quantity_on_hand) * col(Item.cost_price)), 0))
+        .where(col(Item.is_active) == True)
     ).first() or 0
 
     return {
         "total_items": int(total_items),
+        "total_categories": int(total_categories),
+        "total_vendors": int(total_vendors),
+        "total_warehouses": int(total_warehouses),
+        "total_inventory_quantity": int(inventory_quantity),
         "low_stock": int(low_stock),
         "inventory_value": float(inventory_value),
-        "active_vendors": int(active_vendors),
+        "active_vendors": int(total_vendors),
     }
 
 

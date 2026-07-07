@@ -2,8 +2,9 @@ from datetime import datetime
 from typing import Dict, List, Optional
 from uuid import UUID
 
-from sqlmodel import Session
+from sqlmodel import Session, select
 
+from app.model.item import Item
 from app.model.warehouse import Warehouse
 from app.schemas.warehouse import WarehouseResponse
 from app.repository import warehouse_repository
@@ -83,10 +84,41 @@ def update_warehouse(
     return _to_response(session, saved)
 
 
+def get_warehouse_summary(session: Session, warehouse_id: UUID) -> Optional[dict]:
+    warehouse = warehouse_repository.get_warehouse_by_id(session, warehouse_id)
+    if not warehouse:
+        return None
+
+    items = session.exec(
+        select(Item).where(Item.warehouse_id == warehouse_id, Item.is_active == True)  # noqa: E712
+    ).all()
+
+    return {
+        "warehouse_id": str(warehouse.id),
+        "warehouse_name": warehouse.name,
+        "total_items": len(items),
+        "total_inventory_quantity": sum(item.quantity_on_hand for item in items),
+        "low_stock_items": [item.id for item in items if item.quantity_on_hand <= item.minimum_stock_level],
+        "items": [item.id for item in items],
+    
+    }
+
+
 def delete_warehouse(session: Session, warehouse_id: UUID) -> Optional[Warehouse]:
     warehouse = warehouse_repository.get_warehouse_by_id(session, warehouse_id)
     if not warehouse:
         return None
+
+    item_count = len(
+        session.exec(
+            select(Item.id).where(Item.warehouse_id == warehouse_id, Item.is_active == True)  # noqa: E712
+        ).all()
+    )
+
+    if item_count > 0:
+        raise ValueError(
+            f"Cannot delete warehouse because it still contains {item_count} active item(s)."
+        )
 
     warehouse.is_active = False
     warehouse.deleted_at = datetime.utcnow()

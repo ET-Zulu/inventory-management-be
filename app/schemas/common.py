@@ -43,6 +43,11 @@ def error_response(code: str, message: str) -> dict:
         }
     }
 
+def resource_in_use_error_response(message: str) -> dict:
+    return {
+        "error": "RESOURCE_IN_USE",
+        "message": message,
+    }
 
 # Common error codes
 class ErrorCode:

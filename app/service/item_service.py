@@ -5,7 +5,11 @@ import re
 
 from sqlmodel import Session
 
+from app.model.category import Category
 from app.model.item import Item
+from app.model.enums import Itemtype
+from app.model.vendor import Vendor
+from app.model.warehouse import Warehouse
 from app.repository import item_repository, warehouse_repository
 
 
@@ -17,11 +21,45 @@ def derive_status(item: Item) -> str:
     return "in stock"
 
 
+def _parse_item_type(value: Optional[str]) -> Itemtype:
+    if not value:
+        return Itemtype.SALLABLE
+
+    normalized = value.strip().upper()
+    try:
+        return Itemtype(normalized)
+    except ValueError:
+        return Itemtype.SALLABLE
+
+
+def _validate_item_references(session: Session, payload) -> None:
+    if payload.vendor_id is None:
+        raise ValueError("vendor_id is required")
+
+    if payload.warehouse_id is None:
+        raise ValueError("warehouse_id is required")
+
+    vendor = session.get(Vendor, payload.vendor_id)
+    if not vendor or not vendor.is_active:
+        raise ValueError(f"vendor '{payload.vendor_id}' not found or inactive")
+
+    warehouse = session.get(Warehouse, payload.warehouse_id)
+    if not warehouse or not warehouse.is_active:
+        raise ValueError(f"warehouse '{payload.warehouse_id}' not found or inactive")
+
+    if payload.category_id is not None:
+        category = session.get(Category, payload.category_id)
+        if not category or not category.is_active:
+            raise ValueError(f"category '{payload.category_id}' not found or inactive")
+
+
 def create_item(session: Session, payload) -> Item:
     sku = payload.sku.strip().upper()
 
     if not re.fullmatch(r"SKU-\d{3,}", sku):
         raise ValueError("SKU must follow the format SKU-001")
+
+    _validate_item_references(session, payload)
 
     existing = item_repository.get_item_by_sku(session, sku)
 
@@ -29,7 +67,6 @@ def create_item(session: Session, payload) -> Item:
         if existing.is_active:
             raise ValueError(f"SKU '{sku}' already exists")
 
-        # Reactivate soft-deleted item with the new creation payload
         existing.is_active = True
         existing.deleted_at = None
         existing.sku = sku
@@ -43,13 +80,9 @@ def create_item(session: Session, payload) -> Item:
         existing.vendor_id = payload.vendor_id
         existing.warehouse_id = payload.warehouse_id
         existing.location = payload.bin_location or ""
+        existing.item_type = _parse_item_type(getattr(payload, "Itemtypes", None))
 
         return item_repository.save_item(session, existing)
-    
-    existing = warehouse_repository.get_warehouse_by_name(session, payload.bin_location)
-
-    if not existing:
-        raise ValueError(f"Warehouse '{payload.bin_location}' does not exist")
 
     item = Item(
         sku=sku,
@@ -63,7 +96,7 @@ def create_item(session: Session, payload) -> Item:
         vendor_id=payload.vendor_id,
         warehouse_id=payload.warehouse_id,
         location=payload.bin_location or "",
-        Itemtypes=payload.Itemtypes
+        item_type=_parse_item_type(getattr(payload, "Itemtypes", None)),
     )
 
     return item_repository.save_item(session, item)
@@ -76,11 +109,23 @@ def get_all_items(
     limit: int = 20,
     category_id: Optional[UUID] = None,
     vendor_id: Optional[UUID] = None,
+    warehouse_id: Optional[UUID] = None,
     search: Optional[str] = None,
     low_stock: bool = False,
+    sort_by: str = "created_at",
+    sort_order: str = "desc",
 ) -> Dict:
     items, total = item_repository.get_filtered_items(
-        session, page, limit, category_id, vendor_id, search, low_stock
+        session,
+        page,
+        limit,
+        category_id=category_id,
+        vendor_id=vendor_id,
+        warehouse_id=warehouse_id,
+        search=search,
+        low_stock=low_stock,
+        sort_by=sort_by,
+        sort_order=sort_order,
     )
 
     active_skus = item_repository.count_active_skus(session)
@@ -114,6 +159,21 @@ def update_item(session: Session, item_id: UUID, payload) -> Optional[Item]:
     if "bin_location" in update_data:
         update_data["location"] = update_data.pop("bin_location") or ""
 
+    if "vendor_id" in update_data and update_data["vendor_id"] is not None:
+        vendor = session.get(Vendor, update_data["vendor_id"])
+        if not vendor or not vendor.is_active:
+            raise ValueError(f"vendor '{update_data['vendor_id']}' not found or inactive")
+
+    if "warehouse_id" in update_data and update_data["warehouse_id"] is not None:
+        warehouse = session.get(Warehouse, update_data["warehouse_id"])
+        if not warehouse or not warehouse.is_active:
+            raise ValueError(f"warehouse '{update_data['warehouse_id']}' not found or inactive")
+
+    if "category_id" in update_data and update_data["category_id"] is not None:
+        category = session.get(Category, update_data["category_id"])
+        if not category or not category.is_active:
+            raise ValueError(f"category '{update_data['category_id']}' not found or inactive")
+
     for key, value in update_data.items():
         setattr(item, key, value)
 
@@ -132,9 +192,9 @@ def delete_item(session: Session, item_id: UUID) -> Tuple[Optional[Item], str]:
         item.deleted_at = datetime.utcnow()
         saved_item = item_repository.save_item(session, item)
         return saved_item, "soft_deleted"
-    else:
-        item_repository.delete_item_hard(session, item)
-        return item, "hard_deleted"
+
+    item_repository.delete_item_hard(session, item)
+    return item, "hard_deleted"
 
 
 def get_storage_capacity(session: Session) -> Dict:

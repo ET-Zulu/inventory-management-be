@@ -2,9 +2,10 @@ from datetime import datetime
 from typing import List, Optional, Tuple
 from uuid import UUID
 
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from app.model.category import Category
+from app.model.item import Item
 from app.schemas.category import CategoryResponse
 from app.repository import category_repository
 
@@ -58,10 +59,37 @@ def update_category(session: Session, category_id: UUID, payload) -> Optional[Ca
     return _to_response(session, saved)
 
 
+def get_category_summary(session: Session, category_id: UUID) -> Optional[dict]:
+    category = category_repository.get_category_by_id(session, category_id)
+    if not category:
+        return None
+
+    total_items = session.exec(
+        select(Item.id).where(Item.category_id == category_id, Item.is_active == True)  # noqa: E712
+    ).all()
+
+    return {
+        "category_id": str(category.id),
+        "category_name": category.name,
+        "total_items": len(total_items),
+    }
+
+
 def delete_category(session: Session, category_id: UUID) -> Optional[Category]:
     category = category_repository.get_category_by_id(session, category_id)
     if not category:
         return None
+
+    item_count = len(
+        session.exec(
+            select(Item.id).where(Item.category_id == category_id, Item.is_active == True)  # noqa: E712
+        ).all()
+    )
+
+    if item_count > 0:
+        raise ValueError(
+            f"Cannot delete category because it is referenced by {item_count} existing item(s)."
+        )
 
     category.is_active = False
     category.deleted_at = datetime.utcnow()
