@@ -36,8 +36,11 @@ def get_filtered_items(
 	limit: int,
 	category_id: Optional[UUID] = None,
 	vendor_id: Optional[UUID] = None,
+	warehouse_id: Optional[UUID] = None,
 	search: Optional[str] = None,
 	low_stock: bool = False,
+	sort_by: str = "created_at",
+	sort_order: str = "desc",
 ) -> Tuple[List[Item], int]:
 	query = select(Item).where(Item.is_active == True)  # noqa: E712
 	count_query = select(func.count()).select_from(Item).where(
@@ -51,6 +54,10 @@ def get_filtered_items(
 	if vendor_id is not None:
 		query = query.where(Item.vendor_id == vendor_id)
 		count_query = count_query.where(Item.vendor_id == vendor_id)
+
+	if warehouse_id is not None:
+		query = query.where(Item.warehouse_id == warehouse_id)
+		count_query = count_query.where(Item.warehouse_id == warehouse_id)
 
 	if search:
 		search_term = f"%{search.strip().lower()}%"
@@ -66,6 +73,16 @@ def get_filtered_items(
 		low_stock_filter = Item.quantity_on_hand <= Item.minimum_stock_level
 		query = query.where(low_stock_filter)
 		count_query = count_query.where(low_stock_filter)
+
+	sort_column = {
+		"name": Item.name,
+		"sku": Item.sku,
+		"quantity_on_hand": Item.quantity_on_hand,
+		"created_at": Item.created_at,
+	}.get(sort_by, Item.created_at)
+
+	sort_attr = sort_column.asc() if sort_order.lower() == "asc" else sort_column.desc()
+	query = query.order_by(sort_attr)
 
 	total = session.exec(count_query).one()
 

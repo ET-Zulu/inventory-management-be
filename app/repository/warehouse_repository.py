@@ -33,7 +33,7 @@ def get_filtered_warehouses(session: Session, page: int, limit: int) -> Tuple[Li
     warehouses = session.exec(
         query.order_by(Warehouse.created_at.desc()).offset(offset).limit(limit)
     ).all()
-    return warehouses, total or 0
+    return warehouses, total or 0 
 
 
 def get_warehouse_by_id(session: Session, warehouse_id: UUID) -> Optional[Warehouse]:
@@ -70,3 +70,41 @@ def count_active_warehouses(session: Session) -> int:
         )
     ).one()
     return result or 0
+
+
+def count_items_per_warehouse(session: Session) -> List[tuple]:
+    """Return total active items per active warehouse.
+
+    Output tuples: (warehouse_id, warehouse_name, total_items)
+    """
+    result = session.exec(
+        select(
+            Warehouse.id,
+            Warehouse.name,
+            func.coalesce(func.count(Item.id), 0),
+        )
+        .join(Item, Item.warehouse_id == Warehouse.id)
+        .where(
+            Warehouse.is_active == True,  # noqa: E712
+            Item.is_active == True,  # noqa: E712
+        )
+        .group_by(Warehouse.id, Warehouse.name)
+        .order_by(Warehouse.created_at.desc())
+    ).all()
+    # ensure a plain list of tuples
+    return list(result)
+
+
+def count_items_in_warehouse(session: Session, warehouse_id: UUID) -> Optional[int]:
+    """Return total active items for a given active warehouse."""
+    result = session.exec(
+        select(func.coalesce(func.count(Item.id), 0))
+        .where(
+            Item.warehouse_id == warehouse_id,
+            Item.is_active == True,  # noqa: E712
+        )
+    ).one()
+
+    return int(result or 0)
+
+

@@ -19,7 +19,23 @@ htmlcov/
 # OS/editor files
 .DS_Store
 .vscode/
+*.swp
+*.swo
+*~
 
+# Test and temporary files
+*.tmp
+*.temp
+*.bak
+*.orig
+*.rej
+test-output/
+test-results/
+.coverage*
+.pytest_cache/
+
+# Database files
+*.sqlite
 alembic.ini
 
 # Environment files
@@ -33,3 +49,5 @@ build/
 # Logs and local DB
 *.log
 *.sqlite3
+*.db
+*.db-journal

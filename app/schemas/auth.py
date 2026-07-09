@@ -1,9 +1,10 @@
 import re
 from datetime import datetime
 import re
+from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
 from app.model.enums import UserRole
 
@@ -85,3 +86,73 @@ class SetupPasswordResponse(BaseModel):
 class AuthTokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
+
+# ---------------------------------------------------------------------------
+# Current user / profile
+# ---------------------------------------------------------------------------
+
+class MeResponse(BaseModel):
+    """Response schema for GET /auth/me."""
+    id: UUID
+    name: str
+    email: EmailStr
+    role: UserRole
+    profile_picture: Optional[str] = None
+    created_at: datetime
+    last_login: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class EditProfileRequest(BaseModel):
+    """Editable profile fields."""
+    name: Optional[str] = Field(default=None, min_length=1, max_length=255)
+    profile_picture: Optional[str] = None
+
+
+# ---------------------------------------------------------------------------
+# Change password
+# ---------------------------------------------------------------------------
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str = Field(min_length=8)
+    confirm_new_password: str
+
+    @field_validator("new_password")
+    @classmethod
+    def new_password_strength(cls, value: str) -> str:
+        return validate_password_strength(value)
+
+    @model_validator(mode="after")
+    def passwords_match(self) -> "ChangePasswordRequest":
+        if self.new_password != self.confirm_new_password:
+            raise ValueError("new_password and confirm_new_password do not match")
+        return self
+
+
+# ---------------------------------------------------------------------------
+# Forgot / reset password
+# ---------------------------------------------------------------------------
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    reset_token: str
+    new_password: str = Field(min_length=8)
+    confirm_new_password: str
+
+    @field_validator("new_password")
+    @classmethod
+    def new_password_strength(cls, value: str) -> str:
+        return validate_password_strength(value)
+
+    @model_validator(mode="after")
+    def passwords_match(self) -> "ResetPasswordRequest":
+        if self.new_password != self.confirm_new_password:
+            raise ValueError("new_password and confirm_new_password do not match")
+        return self

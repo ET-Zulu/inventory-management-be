@@ -22,6 +22,10 @@ def get_dashboard_overview(db: Session) -> dict:
 
     return {
         "total_items": metrics["total_items"],
+        "total_categories": metrics["total_categories"],
+        "total_vendors": metrics["total_vendors"],
+        "total_warehouses": metrics["total_warehouses"],
+        "total_inventory_quantity": metrics["total_inventory_quantity"],
         "low_stock": metrics["low_stock"],
         "inventory_value": metrics["inventory_value"],
         "active_vendors": metrics["active_vendors"],

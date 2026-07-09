@@ -13,3 +13,4 @@ from .transaction import Transaction
 from .bulk_import import BulkImport
 from .invite_token import InviteToken
 from .refresh_token import RefreshToken
+from .password_reset_token import PasswordResetToken

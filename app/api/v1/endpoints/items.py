@@ -75,8 +75,11 @@ def get_items(
     limit: int = Query(default=20, ge=1, le=100),
     category: Optional[UUID] = Query(default=None),
     vendor: Optional[UUID] = Query(default=None),
+    warehouse: Optional[UUID] = Query(default=None),
     search: Optional[str] = Query(default=None),
     low_stock: bool = Query(default=False),
+    sort_by: str = Query(default="created_at"),
+    sort_order: str = Query(default="desc"),
 ):
     result = item_service.get_all_items(
         session,
@@ -84,8 +87,11 @@ def get_items(
         limit=limit,
         category_id=category,
         vendor_id=vendor,
+        warehouse_id=warehouse,
         search=search,
         low_stock=low_stock,
+        sort_by=sort_by,
+        sort_order=sort_order,
     )
 
     items_data = [_item_to_response(item) for item in result["data"]]
