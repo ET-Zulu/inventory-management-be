@@ -36,14 +36,16 @@ def _send_email(to: str, subject: str, body: str) -> None:
 def send_invitation_email(email: str, role: str, raw_token: str) -> None:
     """Sends an invitation email with an account setup token."""
     subject = "You have been invited to the Inventory Management System"
+    setup_link = f"{settings.frontend_url}/setup-password?token={raw_token}&email={email}"
+    
     body = f"""Hello,
 
 You have been invited to join the Inventory Management System as a(n) {role.upper()}.
 
-Please use the following invite token to set up your account:
-{raw_token}
+Please click the link below to set up your account and choose a password:
+{setup_link}
 
-This token will expire in 24 hours.
+This link will expire in 24 hours.
 
 Best regards,
 Inventory Management Team
@@ -54,14 +56,16 @@ Inventory Management Team
 def send_password_reset_email(email: str, raw_token: str) -> None:
     """Sends a password reset email with a time-limited reset token."""
     subject = "Password Reset Request – Inventory Management System"
+    reset_link = f"{settings.frontend_url}/reset-password?token={raw_token}&email={email}"
+    
     body = f"""Hello,
 
 We received a request to reset the password for your account.
 
-Use the following token to reset your password:
-{raw_token}
+Please click the link below to reset your password:
+{reset_link}
 
-This token will expire in 1 hour. If you did not request a password reset, you can safely ignore this email.
+This link will expire in 1 hour. If you did not request a password reset, you can safely ignore this email.
 
 Best regards,
 Inventory Management Team

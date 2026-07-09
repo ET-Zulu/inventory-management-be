@@ -2,6 +2,8 @@ from typing import List, Optional, Tuple
 from uuid import UUID
 import re
 
+from app.utilts.sanitize import sanitize_search_term, LIKE_ESCAPE_CHAR
+
 from sqlalchemy import func, or_
 from sqlmodel import Session, select
 
@@ -59,12 +61,12 @@ def get_filtered_items(
 		query = query.where(Item.warehouse_id == warehouse_id)
 		count_query = count_query.where(Item.warehouse_id == warehouse_id)
 
-	if search:
-		search_term = f"%{search.strip().lower()}%"
+	search_pattern = sanitize_search_term(search)
+	if search_pattern:
 		search_filter = or_(
-			func.lower(Item.name).like(search_term),
-			func.lower(Item.sku).like(search_term),
-			func.lower(Item.description).like(search_term),
+			func.lower(Item.name).like(search_pattern, escape=LIKE_ESCAPE_CHAR),
+			func.lower(Item.sku).like(search_pattern, escape=LIKE_ESCAPE_CHAR),
+			func.lower(Item.description).like(search_pattern, escape=LIKE_ESCAPE_CHAR),
 		)
 		query = query.where(search_filter)
 		count_query = count_query.where(search_filter)

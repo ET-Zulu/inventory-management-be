@@ -4,6 +4,7 @@ from uuid import UUID
 from sqlalchemy import or_, func
 
 from app.model.vendor import Vendor
+from app.utilts.sanitize import sanitize_search_term, LIKE_ESCAPE_CHAR
 
 
 def create_vendor(session: Session, vendor: Vendor) -> Vendor:
@@ -33,14 +34,13 @@ def get_all_vendors(
         Vendor.is_active == True
     )
 
-    if search:
-        search = f"%{search.lower()}%"
-
+    search_pattern = sanitize_search_term(search)
+    if search_pattern:
         query = query.where(
             or_(
-                func.lower(Vendor.name).like(search),
-                func.lower(Vendor.contact_person).like(search),
-                func.lower(Vendor.location).like(search)
+                func.lower(Vendor.name).like(search_pattern, escape=LIKE_ESCAPE_CHAR),
+                func.lower(Vendor.contact_person).like(search_pattern, escape=LIKE_ESCAPE_CHAR),
+                func.lower(Vendor.location).like(search_pattern, escape=LIKE_ESCAPE_CHAR)
             )
         )
 
