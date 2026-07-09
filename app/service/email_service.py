@@ -13,14 +13,16 @@ def send_invitation_email(email: str, role: str, raw_token: str) -> None:
     Falls back to console logging if SMTP is not configured.
     """
     subject = "You have been invited to the Inventory Management System"
+    invite_link = f"{settings.frontend_url}/setup-password?token={raw_token}"
     body = f"""Hello,
 
 You have been invited to join the Inventory Management System as a(n) {role.upper()}.
 
-Please use the following invite token to set up your account:
-{raw_token}
+Please click the link below to set up your password and activate your account:
 
-This token will expire in 24 hours.
+{invite_link}
+
+This link will expire in 24 hours. If you did not expect this invitation, you can safely ignore this email.
 
 Best regards,
 Inventory Management Team

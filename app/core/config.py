@@ -22,6 +22,9 @@ class Settings:
     smtp_email: str = os.getenv("SMTP_EMAIL", "")
     smtp_password: str = os.getenv("SMTP_PASSWORD", "")
 
+    # Frontend URL (used to build invitation links in emails)
+    frontend_url: str = os.getenv("FRONTEND_URL", "http://localhost:3000")
+
 
 
 settings = Settings()
