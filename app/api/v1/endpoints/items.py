@@ -23,6 +23,7 @@ router = APIRouter(prefix="/items", tags=["Items"])
 
 def _item_to_response(item) -> dict:
     status = item_service.derive_status(item)
+    bin_ = item.bin
     return ItemResponse(
         id=item.id,
         sku=item.sku,
@@ -34,16 +35,15 @@ def _item_to_response(item) -> dict:
         selling_price=item.selling_price,
         category_id=item.category_id,
         vendor_id=item.vendor_id,
-        warehouse_id=item.warehouse_id,
-        bin_location=item.location or None,
+        bin_id=item.bin_id,
+        warehouse_id=bin_.warehouse_id,
+        bin_location=bin_.name,
         is_active=item.is_active,
         created_at=item.created_at,
         status=status,
     ).model_dump()
 
 
-# /storage/capacity must be defined before /{item_id} so FastAPI
-# doesn't try to parse "storage" as a UUID
 @router.get("/storage/capacity", dependencies=[Depends(get_current_active_user)])
 def get_storage_capacity(session: SessionType):
     capacity = item_service.get_storage_capacity(session)
@@ -65,7 +65,7 @@ def create_item(payload: ItemCreate, session: SessionType):
         raise HTTPException(
             status_code=409,
             detail=error_response(ErrorCode.CONFLICT, str(e)),
-        )
+        ) from e
 
 
 @router.get("", dependencies=[Depends(get_current_active_user)])
@@ -76,6 +76,7 @@ def get_items(
     category: Optional[UUID] = Query(default=None),
     vendor: Optional[UUID] = Query(default=None),
     warehouse: Optional[UUID] = Query(default=None),
+    bin: Optional[UUID] = Query(default=None),
     search: Optional[str] = Query(default=None),
     low_stock: bool = Query(default=False),
     sort_by: str = Query(default="created_at"),
@@ -88,6 +89,7 @@ def get_items(
         category_id=category,
         vendor_id=vendor,
         warehouse_id=warehouse,
+        bin_id=bin,
         search=search,
         low_stock=low_stock,
         sort_by=sort_by,
@@ -117,6 +119,7 @@ def check_sku(
 ):
     return item_service.check_sku_availability(session, sku)
 
+
 @router.get("/{item_id}", dependencies=[Depends(get_current_active_user)])
 def get_item(item_id: UUID, session: SessionType):
     item = item_service.get_item_by_id(session, item_id)
@@ -133,7 +136,14 @@ def get_item(item_id: UUID, session: SessionType):
 
 @router.patch("/{item_id}", dependencies=[Depends(get_operator)])
 def update_item(item_id: UUID, payload: ItemUpdate, session: SessionType):
-    item = item_service.update_item(session, item_id, payload)
+    try:
+        item = item_service.update_item(session, item_id, payload)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=409,
+            detail=error_response(ErrorCode.CONFLICT, str(e)),
+        ) from e
+
     if not item:
         raise HTTPException(
             status_code=404,
@@ -160,4 +170,3 @@ def delete_item(item_id: UUID, session: SessionType):
         message = "Item permanently deleted"
 
     return success_response(message=message)
-

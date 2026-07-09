@@ -4,6 +4,7 @@ from uuid import UUID
 from sqlalchemy import func
 from sqlmodel import Session, select
 
+from app.model.bin import Bin
 from app.model.item import Item
 from app.model.warehouse import Warehouse
 
@@ -33,7 +34,7 @@ def get_filtered_warehouses(session: Session, page: int, limit: int) -> Tuple[Li
     warehouses = session.exec(
         query.order_by(Warehouse.created_at.desc()).offset(offset).limit(limit)
     ).all()
-    return warehouses, total or 0 
+    return warehouses, total or 0
 
 
 def get_warehouse_by_id(session: Session, warehouse_id: UUID) -> Optional[Warehouse]:
@@ -53,10 +54,12 @@ def save_warehouse(session: Session, warehouse: Warehouse) -> Warehouse:
 
 
 def count_used_capacity(session: Session, warehouse_id: UUID) -> int:
-    """Sum of quantity_on_hand for all active items in this warehouse."""
     result = session.exec(
-        select(func.coalesce(func.sum(Item.quantity_on_hand), 0)).where(
-            Item.warehouse_id == warehouse_id,
+        select(func.coalesce(func.sum(Item.quantity_on_hand), 0))
+        .join(Bin, Item.bin_id == Bin.id)
+        .where(
+            Bin.warehouse_id == warehouse_id,
+            Bin.deleted_at.is_(None),
             Item.is_active == True,  # noqa: E712
         )
     ).one()
@@ -73,34 +76,31 @@ def count_active_warehouses(session: Session) -> int:
 
 
 def count_items_per_warehouse(session: Session) -> List[tuple]:
-    """Return total active items per active warehouse.
-
-    Output tuples: (warehouse_id, warehouse_name, total_items)
-    """
     result = session.exec(
         select(
             Warehouse.id,
             Warehouse.name,
             func.coalesce(func.count(Item.id), 0),
         )
-        .join(Item, Item.warehouse_id == Warehouse.id)
+        .join(Bin, Bin.warehouse_id == Warehouse.id, isouter=True)
+        .join(Item, Item.bin_id == Bin.id, isouter=True)
         .where(
             Warehouse.is_active == True,  # noqa: E712
-            Item.is_active == True,  # noqa: E712
+            (Item.id.is_(None)) | (Item.is_active == True),  # noqa: E712
         )
         .group_by(Warehouse.id, Warehouse.name)
         .order_by(Warehouse.created_at.desc())
     ).all()
-    # ensure a plain list of tuples
     return list(result)
 
 
-def count_items_in_warehouse(session: Session, warehouse_id: UUID) -> Optional[int]:
-    """Return total active items for a given active warehouse."""
+def count_items_in_warehouse(session: Session, warehouse_id: UUID) -> int:
     result = session.exec(
         select(func.coalesce(func.count(Item.id), 0))
+        .join(Bin, Item.bin_id == Bin.id)
         .where(
-            Item.warehouse_id == warehouse_id,
+            Bin.warehouse_id == warehouse_id,
+            Bin.deleted_at.is_(None),
             Item.is_active == True,  # noqa: E712
         )
     ).one()
@@ -108,3 +108,13 @@ def count_items_in_warehouse(session: Session, warehouse_id: UUID) -> Optional[i
     return int(result or 0)
 
 
+def get_active_items_in_warehouse(session: Session, warehouse_id: UUID) -> List[Item]:
+    return session.exec(
+        select(Item)
+        .join(Bin, Item.bin_id == Bin.id)
+        .where(
+            Bin.warehouse_id == warehouse_id,
+            Bin.deleted_at.is_(None),
+            Item.is_active == True,  # noqa: E712
+        )
+    ).all()

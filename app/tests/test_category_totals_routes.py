@@ -6,6 +6,7 @@ from sqlmodel import Session, SQLModel, create_engine
 from main import app
 from app.core.database import get_session
 from app.dependencies.auth import get_current_active_user
+from app.model.bin import Bin
 from app.model.category import Category
 from app.model.item import Item
 from app.model.vendor import Vendor
@@ -48,16 +49,20 @@ def test_category_total_routes_are_distinct():
         session.refresh(vendor)
         session.refresh(warehouse)
 
+        bin_ = Bin(warehouse_id=warehouse.id, name="General Storage", is_system=True)
+        session.add(bin_)
+        session.commit()
+        session.refresh(bin_)
+
         item = Item(
             sku="SKU-1",
             name="Laptop",
             quantity_on_hand=5,
             cost_price=100.0,
             selling_price=150.0,
-            location="A1",
             category_id=category_id,
             vendor_id=vendor.id,
-            warehouse_id=warehouse.id,
+            bin_id=bin_.id,
             item_type=Itemtype.SALLABLE,
             is_active=True,
         )

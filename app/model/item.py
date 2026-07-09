@@ -8,7 +8,7 @@ if TYPE_CHECKING:
     from app.model.transaction import Transaction
     from app.model.vendor import Vendor
     from app.model.category import Category
-    from app.model.warehouse import Warehouse
+    from app.model.bin import Bin
     from app.model.notification import Notification
 
 from sqlmodel import SQLModel, Field, Relationship
@@ -30,49 +30,36 @@ class Item(SQLModel, table=True):
     cost_price: float
     selling_price: float
 
-    location: str = Field(default="")
+    # Every item must belong to exactly one bin.
+    bin_id: UUID = Field(foreign_key="bins.id")
 
+    # References (optional/required as per existing design)
     category_id: Optional[UUID] = Field(
         default=None,
-        foreign_key="categories.id"
+        foreign_key="categories.id",
     )
 
     vendor_id: UUID = Field(
-        foreign_key="vendors.id"
+        foreign_key="vendors.id",
     )
 
     item_type: Itemtype = Field(
-        default=Itemtype.SALLABLE
-    )
-
-    warehouse_id: UUID = Field(
-        foreign_key="warehouses.id"
+        default=Itemtype.SALLABLE,
     )
 
     is_active: bool = True
 
     created_at: datetime = Field(
-        default_factory=datetime.utcnow
+        default_factory=datetime.utcnow,
     )
 
     deleted_at: datetime | None = None
 
-    category: Optional["Category"] = Relationship(
-        back_populates="items"
-    )
+    category: Optional["Category"] = Relationship(back_populates="items")
+    vendor: "Vendor" = Relationship(back_populates="items")
 
-    vendor: "Vendor" = Relationship(
-        back_populates="items"
-    )
+    bin: "Bin" = Relationship(back_populates="items")
 
-    warehouse: "Warehouse" = Relationship(
-        back_populates="items"
-    )
+    transactions: List["Transaction"] = Relationship(back_populates="item")
+    notifications: List["Notification"] = Relationship(back_populates="item")
 
-    transactions: List["Transaction"] = Relationship(
-        back_populates="item"
-    )
-
-    notifications: List["Notification"] = Relationship(
-        back_populates="item"
-    )

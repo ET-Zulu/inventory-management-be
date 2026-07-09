@@ -5,12 +5,13 @@ import re
 
 from sqlmodel import Session
 
+from app.model.bin import Bin
 from app.model.category import Category
 from app.model.item import Item
 from app.model.enums import Itemtype
 from app.model.vendor import Vendor
 from app.model.warehouse import Warehouse
-from app.repository import item_repository, warehouse_repository
+from app.repository import bin_repository, item_repository
 
 
 def derive_status(item: Item) -> str:
@@ -32,25 +33,49 @@ def _parse_item_type(value: Optional[str]) -> Itemtype:
         return Itemtype.SALLABLE
 
 
-def _validate_item_references(session: Session, payload) -> None:
+def _resolve_bin_id(session: Session, *, bin_id: UUID | None, warehouse_id: UUID | None) -> UUID:
+    if bin_id is not None:
+        bin_ = session.get(Bin, bin_id)
+        if not bin_ or bin_.deleted_at is not None:
+            raise ValueError(f"bin '{bin_id}' not found")
+
+        if warehouse_id is not None and bin_.warehouse_id != warehouse_id:
+            raise ValueError("bin does not belong to the selected warehouse")
+
+        warehouse = session.get(Warehouse, bin_.warehouse_id)
+        if not warehouse or not warehouse.is_active:
+            raise ValueError(f"warehouse '{bin_.warehouse_id}' not found or inactive")
+
+        return bin_.id
+
+    if warehouse_id is None:
+        raise ValueError("bin_id or warehouse_id is required")
+
+    warehouse = session.get(Warehouse, warehouse_id)
+    if not warehouse or not warehouse.is_active:
+        raise ValueError(f"warehouse '{warehouse_id}' not found or inactive")
+
+    return bin_repository.ensure_general_storage_bin(session, warehouse_id).id
+
+
+def _validate_item_references(session: Session, payload) -> UUID:
     if payload.vendor_id is None:
         raise ValueError("vendor_id is required")
-
-    if payload.warehouse_id is None:
-        raise ValueError("warehouse_id is required")
 
     vendor = session.get(Vendor, payload.vendor_id)
     if not vendor or not vendor.is_active:
         raise ValueError(f"vendor '{payload.vendor_id}' not found or inactive")
 
-    warehouse = session.get(Warehouse, payload.warehouse_id)
-    if not warehouse or not warehouse.is_active:
-        raise ValueError(f"warehouse '{payload.warehouse_id}' not found or inactive")
-
     if payload.category_id is not None:
         category = session.get(Category, payload.category_id)
         if not category or not category.is_active:
             raise ValueError(f"category '{payload.category_id}' not found or inactive")
+
+    return _resolve_bin_id(
+        session,
+        bin_id=getattr(payload, "bin_id", None),
+        warehouse_id=getattr(payload, "warehouse_id", None),
+    )
 
 
 def create_item(session: Session, payload) -> Item:
@@ -59,7 +84,7 @@ def create_item(session: Session, payload) -> Item:
     if not re.fullmatch(r"SKU-\d{3,}", sku):
         raise ValueError("SKU must follow the format SKU-001")
 
-    _validate_item_references(session, payload)
+    bin_id = _validate_item_references(session, payload)
 
     existing = item_repository.get_item_by_sku(session, sku)
 
@@ -78,8 +103,7 @@ def create_item(session: Session, payload) -> Item:
         existing.selling_price = payload.selling_price
         existing.category_id = payload.category_id
         existing.vendor_id = payload.vendor_id
-        existing.warehouse_id = payload.warehouse_id
-        existing.location = payload.bin_location or ""
+        existing.bin_id = bin_id
         existing.item_type = _parse_item_type(getattr(payload, "Itemtypes", None))
 
         return item_repository.save_item(session, existing)
@@ -94,8 +118,7 @@ def create_item(session: Session, payload) -> Item:
         selling_price=payload.selling_price,
         category_id=payload.category_id,
         vendor_id=payload.vendor_id,
-        warehouse_id=payload.warehouse_id,
-        location=payload.bin_location or "",
+        bin_id=bin_id,
         item_type=_parse_item_type(getattr(payload, "Itemtypes", None)),
     )
 
@@ -110,6 +133,7 @@ def get_all_items(
     category_id: Optional[UUID] = None,
     vendor_id: Optional[UUID] = None,
     warehouse_id: Optional[UUID] = None,
+    bin_id: Optional[UUID] = None,
     search: Optional[str] = None,
     low_stock: bool = False,
     sort_by: str = "created_at",
@@ -122,6 +146,7 @@ def get_all_items(
         category_id=category_id,
         vendor_id=vendor_id,
         warehouse_id=warehouse_id,
+        bin_id=bin_id,
         search=search,
         low_stock=low_stock,
         sort_by=sort_by,
@@ -155,24 +180,24 @@ def update_item(session: Session, item_id: UUID, payload) -> Optional[Item]:
     update_data = payload.model_dump(exclude_unset=True)
 
     update_data.pop("sku", None)
-
-    if "bin_location" in update_data:
-        update_data["location"] = update_data.pop("bin_location") or ""
+    update_data.pop("bin_location", None)
 
     if "vendor_id" in update_data and update_data["vendor_id"] is not None:
         vendor = session.get(Vendor, update_data["vendor_id"])
         if not vendor or not vendor.is_active:
             raise ValueError(f"vendor '{update_data['vendor_id']}' not found or inactive")
 
-    if "warehouse_id" in update_data and update_data["warehouse_id"] is not None:
-        warehouse = session.get(Warehouse, update_data["warehouse_id"])
-        if not warehouse or not warehouse.is_active:
-            raise ValueError(f"warehouse '{update_data['warehouse_id']}' not found or inactive")
-
     if "category_id" in update_data and update_data["category_id"] is not None:
         category = session.get(Category, update_data["category_id"])
         if not category or not category.is_active:
             raise ValueError(f"category '{update_data['category_id']}' not found or inactive")
+
+    if "bin_id" in update_data or "warehouse_id" in update_data:
+        item.bin_id = _resolve_bin_id(
+            session,
+            bin_id=update_data.pop("bin_id", None),
+            warehouse_id=update_data.pop("warehouse_id", None),
+        )
 
     for key, value in update_data.items():
         setattr(item, key, value)
@@ -199,7 +224,6 @@ def delete_item(session: Session, item_id: UUID) -> Tuple[Optional[Item], str]:
 
 def get_storage_capacity(session: Session) -> Dict:
     total_quantity = item_repository.get_total_quantity(session)
-    # Business decision: we treat the sum of minimum_stock_level as total capacity
     total_capacity = item_repository.get_total_minimum_stock_level(session)
 
     if total_capacity == 0:
@@ -216,10 +240,10 @@ def get_storage_capacity(session: Session) -> Dict:
         "free_percent": free_percent,
     }
 
+
 def check_sku_availability(session: Session, sku: str) -> Dict:
     sku = sku.strip().upper()
 
-    # Only allow SKU-001, SKU-002, etc.
     if not re.fullmatch(r"SKU-\d{3,}", sku):
         return {
             "sku": sku,

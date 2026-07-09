@@ -7,6 +7,7 @@ from .user import User
 from .category import Category
 from .vendor import Vendor
 from .warehouse import Warehouse
+from .bin import Bin
 from .item import Item
 from .notification import Notification
 from .transaction import Transaction

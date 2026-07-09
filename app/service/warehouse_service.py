@@ -1,13 +1,12 @@
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 from uuid import UUID
 
-from sqlmodel import Session, select
+from sqlmodel import Session
 
-from app.model.item import Item
 from app.model.warehouse import Warehouse
+from app.repository import bin_repository, warehouse_repository
 from app.schemas.warehouse import WarehouseResponse
-from app.repository import warehouse_repository
 
 
 def _to_response(session: Session, warehouse: Warehouse) -> WarehouseResponse:
@@ -30,13 +29,14 @@ def create_warehouse(session: Session, payload) -> Warehouse:
     if existing:
         if existing.is_active:
             raise ValueError(f"Warehouse '{payload.name}' already exists")
-        # Reactivate soft-deleted warehouse
         existing.is_active = True
         existing.deleted_at = None
         existing.location = payload.location
         existing.capacity = payload.capacity
         existing.description = payload.description
-        return warehouse_repository.save_warehouse(session, existing)
+        saved = warehouse_repository.save_warehouse(session, existing)
+        bin_repository.ensure_general_storage_bin(session, saved.id)
+        return saved
 
     warehouse = Warehouse(
         name=payload.name,
@@ -44,7 +44,9 @@ def create_warehouse(session: Session, payload) -> Warehouse:
         capacity=payload.capacity,
         description=payload.description,
     )
-    return warehouse_repository.save_warehouse(session, warehouse)
+    saved = warehouse_repository.save_warehouse(session, warehouse)
+    bin_repository.ensure_general_storage_bin(session, saved.id)
+    return saved
 
 
 def get_all_warehouses(
@@ -89,9 +91,7 @@ def get_warehouse_summary(session: Session, warehouse_id: UUID) -> Optional[dict
     if not warehouse:
         return None
 
-    items = session.exec(
-        select(Item).where(Item.warehouse_id == warehouse_id, Item.is_active == True)  # noqa: E712
-    ).all()
+    items = warehouse_repository.get_active_items_in_warehouse(session, warehouse_id)
 
     return {
         "warehouse_id": str(warehouse.id),
@@ -100,7 +100,6 @@ def get_warehouse_summary(session: Session, warehouse_id: UUID) -> Optional[dict
         "total_inventory_quantity": sum(item.quantity_on_hand for item in items),
         "low_stock_items": [item.id for item in items if item.quantity_on_hand <= item.minimum_stock_level],
         "items": [item.id for item in items],
-    
     }
 
 
@@ -109,15 +108,10 @@ def delete_warehouse(session: Session, warehouse_id: UUID) -> Optional[Warehouse
     if not warehouse:
         return None
 
-    item_count = len(
-        session.exec(
-            select(Item.id).where(Item.warehouse_id == warehouse_id, Item.is_active == True)  # noqa: E712
-        ).all()
-    )
-
-    if item_count > 0:
+    bin_count = bin_repository.count_bins_in_warehouse(session, warehouse_id)
+    if bin_count > 0:
         raise ValueError(
-            f"Cannot delete warehouse because it still contains {item_count} active item(s)."
+            f"Cannot delete warehouse because it still contains {bin_count} bin(s)."
         )
 
     warehouse.is_active = False
@@ -151,22 +145,6 @@ def check_warehouse_name_availability(session: Session, name: str) -> Dict:
     }
 
 
-# def get_total_items_per_warehouse(session: Session) -> Dict:
-#     """Get total active item count grouped by warehouse."""
-#     rows = warehouse_repository.count_items_per_warehouse(session)
-
-#     data = [
-#         {
-#             "warehouse_id": warehouse_id,
-#             "warehouse_name": warehouse_name,
-#             "total_items": int(total_items or 0),
-#         }
-#         for warehouse_id, warehouse_name, total_items in rows
-#     ]
-
-#     return {"data": data}
-
-
 def get_total_items_per_warehouse_by_id(
     session: Session, warehouse_id: UUID
 ) -> Optional[Dict]:
@@ -181,5 +159,3 @@ def get_total_items_per_warehouse_by_id(
         "warehouse_name": warehouse.name,
         "total_items": int(total_items or 0),
     }
-
-

@@ -12,7 +12,7 @@ from app.model.vendor import Vendor
 from app.model.bulk_import import BulkImport
 from app.model.enums import ImportStatus
 
-from app.repository import warehouse_repository
+from app.repository import bin_repository, warehouse_repository
 from app.repository.import_repository import (
     get_import_history,
     search_import_history,
@@ -147,7 +147,7 @@ def process_csv_import(session: Session, file, user_id: UUID | None = None):
             existing = warehouse_repository.get_warehouse_by_name(session, row.get("location"))
 
             if not existing:
-                raise ValueError(f"Warehouse '{row.get("location")}' does not exist")
+                raise ValueError(f"Warehouse '{row.get('location')}' does not exist")
 
             item = Item(
                 sku=row["sku"],
@@ -160,12 +160,10 @@ def process_csv_import(session: Session, file, user_id: UUID | None = None):
                 selling_price=float(row.get("selling_price", 0)),
 
                 description=row.get("description"),
-                location=row.get("location", ""),
 
                 quantity_on_hand=int(row.get("quantity_on_hand", 0)),
                 minimum_stock_level=int(row.get("minimum_stock_level", 0)),
-
-                warehouse_id= existing.id,
+                bin_id=bin_repository.ensure_general_storage_bin(session, existing.id).id,
 
                 category_id=row.get("category_id") if row.get("category_id") else None
                 
