@@ -11,6 +11,7 @@ class Settings:
     app_name: str = os.getenv("APP_NAME", "Inventory Management System")
     app_version: str = os.getenv("APP_VERSION", "1.0.0")
     api_v1_prefix: str = os.getenv("API_V1_PREFIX", "/api/v1")
+    frontend_url: str = os.getenv("FRONTEND_URL", "http://localhost:3000")
     postgres_url: str = os.getenv("DATABASE_URL") or os.getenv("POSTGRES_URL") or os.getenv("postgres_url") or "sqlite:///./test.db"
     secret_key: str = os.getenv("SECRET_KEY", "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7")
     algorithm: str = os.getenv("ALGORITHM", "HS256")

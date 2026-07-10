@@ -9,6 +9,7 @@ from app.model.enums import TransactionType
 from app.model.item import Item
 from app.model.transaction import Transaction
 from app.model.user import User
+from app.utilts.sanitize import sanitize_search_term, LIKE_ESCAPE_CHAR
 
 
 def get_item_for_update(session: Session, item_id: UUID) -> Optional[Item]:
@@ -35,12 +36,11 @@ def fetch_transaction_ledger(
     statement = select(Transaction).join(Item).join(User)
     count_statement = select(func.count()).select_from(Transaction)
 
-    if search:
-        search_text = f"%{search}%"
+    search_pattern = sanitize_search_term(search)
+    if search_pattern:
         filter_cond = or_(
-            cast(Transaction.item_id, String).ilike(search_text),
-            col(Item.sku).ilike(search_text),
-            col(Item.name).ilike(search_text),
+            col(Item.sku).ilike(search_pattern, escape=LIKE_ESCAPE_CHAR),
+            col(Item.name).ilike(search_pattern, escape=LIKE_ESCAPE_CHAR),
         )
         statement = statement.where(filter_cond)
         count_statement = count_statement.where(filter_cond)

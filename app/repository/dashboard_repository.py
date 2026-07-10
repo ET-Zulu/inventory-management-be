@@ -10,6 +10,7 @@ from app.model.vendor import Vendor
 from app.model.warehouse import Warehouse
 from app.model.transaction import Transaction
 from app.model.enums import TransactionType
+from app.utilts.sanitize import sanitize_search_term, LIKE_ESCAPE_CHAR
 
 
 def get_dashboard_summary_metrics(session: Session) -> dict[str, Any]:
@@ -105,13 +106,16 @@ def fetch_recent_dashboard_transactions(session: Session, limit: int = 5) -> lis
 
 
 def execute_dashboard_global_search(session: Session, query: str) -> dict[str, list[dict]]:
-    search_text = f"%{query}%"
+    search_pattern = sanitize_search_term(query)
+
+    if not search_pattern:
+        return {"inventory": [], "vendors": []}
 
     items = session.exec(
         select(Item).where(
             or_(
-                col(Item.name).ilike(search_text),
-                col(Item.sku).ilike(search_text)
+                col(Item.name).ilike(search_pattern, escape=LIKE_ESCAPE_CHAR),
+                col(Item.sku).ilike(search_pattern, escape=LIKE_ESCAPE_CHAR)
             )
         ).limit(10)
     ).all()
@@ -119,8 +123,8 @@ def execute_dashboard_global_search(session: Session, query: str) -> dict[str, l
     vendors = session.exec(
         select(Vendor).where(
             or_(
-                col(Vendor.name).ilike(search_text),
-                col(Vendor.contact_info).ilike(search_text)  
+                col(Vendor.name).ilike(search_pattern, escape=LIKE_ESCAPE_CHAR),
+                col(Vendor.contact_info).ilike(search_pattern, escape=LIKE_ESCAPE_CHAR)
                 )
         ).limit(10)
     ).all()
