@@ -19,6 +19,7 @@ app.add_middleware(
         "http://127.0.0.1:3000",
         "http://192.168.1.4:3000",
         "http://192.168.1.11:3000",
+        "https://inventory-deployment-one.vercel.app"
     ],
     allow_credentials=True,
     allow_methods=["*"],
