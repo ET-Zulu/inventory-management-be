@@ -88,7 +88,7 @@ def get_vendors(
             lead_time=v.lead_time,
             is_active=v.is_active,
             created_at=v.created_at,
-        ).model_dump() | {"items_count": len(v.items)}
+        ).model_dump() | {"items_count": len(v.items), "total_items": len(v.items)}
         for v in vendors
     ]
 
@@ -119,6 +119,7 @@ def get_vendor(
 
         data = VendorRead.model_validate(vendor).model_dump()
         data["items_count"] = len(items_count)
+        data["total_items"] = len(items_count)
 
         return success_response(
             message="Vendor fetched successfully",

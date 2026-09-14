@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, computed_field
 
 
 class ContactPersonSchema(BaseModel):
@@ -48,6 +48,12 @@ class VendorRead(BaseModel):
     is_active: bool
     created_at: datetime
     items_count: int = 0
+
+    @computed_field
+    @property
+    def status(self) -> str:
+        """Human-readable state for the UI, derived from is_active."""
+        return "active" if self.is_active else "inactive"
 
     class Config:
         from_attributes = True
